@@ -2,6 +2,7 @@ import cv2
 import time
 import rpyc
 import logging
+import copy
 import Tkinter as tk
 import numpy as np
 from PIL import Image, ImageTk
@@ -39,10 +40,13 @@ def grayToRGB(img):
     # R = splited[:,2]
     # Merged = cv2.merge((R, G, B))
 
+def rgbToTkImage(img):
+    return ImageTk.PhotoImage(image=img)
+
 def grayToTkImage(img):
     # Convert the Image object into a TkPhoto object
     im = Image.fromarray(grayToRGB(img))
-    return ImageTk.PhotoImage(image=im)
+    return rgbToTkImage(im)
 
 @profile
 def findEdges(img, blur_factor, edge_low, edge_high):
@@ -51,10 +55,12 @@ def findEdges(img, blur_factor, edge_low, edge_high):
     return edges
 
 @profile
-def determinePolynominals(img):
+def findContours(img):
     # CORE, Closed source code
-    # To be Implemented
-    return img
+    ret, thresh = cv2.threshold(img, 100, 100, 100)
+    img, contours, hierarchy = \
+        cv2.findContours(img,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+    return contours
 
 class VectorEquation():
     # This class defines a vector equation with arc lenth parameterization
@@ -132,12 +138,23 @@ class ConfigurationMainFrame():
             BLUR_FACTOR, CANNY_LO, CANNY_HI)
         print type(processedImage)
         print processedImage
+        HEIGHT, WIDTH = originalImage.shape
+        computerVisionImage = copy.copy(originalImage)
+
+        contours = findContours(processedImage)
+        cv2.drawContours(computerVisionImage, contours, -1, (0, 255, 0), 3)
+
+        # Convert To Tkinter images, should not be timed.
         originalImage = grayToTkImage(originalImage)
         processedImage = grayToTkImage(processedImage)
+        computerVisionImage = grayToTkImage(computerVisionImage)
+
         ui.w.OriginalImageLabel.configure(image = originalImage)
         ui.w.OriginalImageLabel.image = originalImage
         ui.w.ProcessedImageLabel.configure(image = processedImage)
         ui.w.ProcessedImageLabel.image = processedImage
+        ui.w.CVImageLabel.configure(image = computerVisionImage)
+        ui.w.CVImageLabel.image = computerVisionImage
 
     def updateMobotInfo(self):
         if self.conn == None: return
