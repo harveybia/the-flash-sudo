@@ -15,8 +15,7 @@ def profile(fn):
         start_time = time.time()
         ret = fn(*args, **kwargs)
         elapsed_time = time.time() - start_time
-        print "Time elapsed for function: %s:"%(fn.__name__)
-        print "%.3f"%(elapsed_time)
+        print "Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time)
         return ret
     return with_profiling
 
@@ -41,12 +40,13 @@ def grayToRGB(img):
     # Merged = cv2.merge((R, G, B))
 
 def rgbToTkImage(img):
-    return ImageTk.PhotoImage(image=img)
+    im = Image.fromarray(img)
+    return ImageTk.PhotoImage(im)
 
 def grayToTkImage(img):
     # Convert the Image object into a TkPhoto object
     im = Image.fromarray(grayToRGB(img))
-    return rgbToTkImage(im)
+    return ImageTk.PhotoImage(im)
 
 @profile
 def findEdges(img, blur_factor, edge_low, edge_high):
@@ -56,11 +56,15 @@ def findEdges(img, blur_factor, edge_low, edge_high):
 
 @profile
 def findContours(img):
-    # CORE, Closed source code
-    ret, thresh = cv2.threshold(img, 100, 100, 100)
-    img, contours, hierarchy = \
-        cv2.findContours(img,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+    contours = cv2.findContours(img,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)[0]
     return contours
+
+@profile
+def findPolys(contours, epsilon=3, closed=False):
+    polys = []
+    for c in contours:
+        polys.append(cv2.approxPolyDP(c, epsilon, closed))
+    return polys
 
 class VectorEquation():
     # This class defines a vector equation with arc lenth parameterization
@@ -119,35 +123,43 @@ class ConfigurationMainFrame():
         print "Ping Action"
 
     def settingsChanged(self, e):
-        print "Settings Changed"
+        print '{:-^30}'.format("UPDATED SETTINGS")
+        print '{:^30}'.format("Blur: %d"%(ui.w.BlurScale.get()))
+        print '{:^30}'.format("Canny Lo: %d"%(ui.w.CannyLoScale.get()))
+        print '{:^30}'.format("Canny Hi: %d"%(ui.w.CannyHiScale.get()))
         self.updateDashboardImages()
+        print '{:-^30}'.format("")
 
     def emergencyStopAction(self):
         print "Emergency Stop"
 
     # Framework Methods
-    @profile
+    #@profile
     def updateDashboardImages(self):
         #if self.conn == None: return
         BLUR_FACTOR = ui.w.BlurScale.get()
         CANNY_LO = ui.w.CannyLoScale.get()
         CANNY_HI = ui.w.CannyHiScale.get()
         originalImage = ex_img
-        print type(originalImage)
+        #print type(originalImage)
         processedImage = findEdges(originalImage,
             BLUR_FACTOR, CANNY_LO, CANNY_HI)
-        print type(processedImage)
-        print processedImage
+        #print type(processedImage)
+        #print processedImage
         HEIGHT, WIDTH = originalImage.shape
-        computerVisionImage = copy.copy(originalImage)
+        computerVisionImage = grayToRGB(copy.copy(originalImage))
 
         contours = findContours(processedImage)
+        if ui.UI_Mobot_Configuration_support.LineApproxBool.get() == "1":
+            print "Finding Approximate Poly Curves with epsilon = 3"
+            contours = polys = findPolys(contours)
+            print "Polys found: %d"%len(contours)
         cv2.drawContours(computerVisionImage, contours, -1, (0, 255, 0), 3)
 
         # Convert To Tkinter images, should not be timed.
         originalImage = grayToTkImage(originalImage)
         processedImage = grayToTkImage(processedImage)
-        computerVisionImage = grayToTkImage(computerVisionImage)
+        computerVisionImage = rgbToTkImage(computerVisionImage)
 
         ui.w.OriginalImageLabel.configure(image = originalImage)
         ui.w.OriginalImageLabel.image = originalImage
