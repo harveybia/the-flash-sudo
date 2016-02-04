@@ -56,7 +56,13 @@ def findEdges(img, blur_factor, edge_low, edge_high):
 
 @profile
 def findContours(img):
-    contours = cv2.findContours(img,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)[0]
+    major_ver, minor_ver, subminor_ver = (cv2.__version__).split('.')
+    if int(major_ver) < 3:
+        contours = cv2.findContours(img,cv2.RETR_TREE,
+                                    cv2.CHAIN_APPROX_SIMPLE)[0]
+    else:
+        contours = cv2.findContours(img,cv2.RETR_TREE,
+                                    cv2.CHAIN_APPROX_SIMPLE)[1]
     return contours
 
 @profile
