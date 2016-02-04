@@ -1,0 +1,9 @@
+ITEM                         : $USD        : SUBMITTED BY
+==========================================================
+DATE: Feb 1 2016------------------------------------------
+High speed memory card       : 4.95        : HARVEY SHI
+Raspberry Pi 2 model B       : 36.09       : HARVEY SHI
+Wireless Cable               : 9.99        : HARVEY SHI
+RPI Camera                   : 32.99       : HARVEY SHI
+----------------------------------------------------------
+
