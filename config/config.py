@@ -88,6 +88,10 @@ def getMobotStatus():
     pass
 
 @profile
+def sampleContourArray(img):
+    return []
+
+@profile
 def calculateDesiredVelocityVector():
     # Takes in a equation (set) and calculate desired velocity vector
     pass
@@ -158,9 +162,14 @@ class ConfigurationMainFrame():
         contours = findContours(processedImage)
         if ui.UI_Mobot_Configuration_support.LineApproxBool.get() == "1":
             print "Finding Approximate Poly Curves with epsilon = 3"
-            contours = polys = findPolys(contours)
+            contours = findPolys(contours)
             print "Polys found: %d"%len(contours)
         cv2.drawContours(computerVisionImage, contours, -1, (0, 255, 0), 3)
+
+        # Now we have an image where contours are detected
+        # We sample the transformed image and try to use Bezier
+        # Approximation to deduce a continous differentiable curve.
+
 
         # Convert To Tkinter images, should not be timed.
         originalImage = grayToTkImage(originalImage)
