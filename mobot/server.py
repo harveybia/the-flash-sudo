@@ -25,11 +25,11 @@ sock.connect((TCP_IP, TCP_PORT))
 term = easyterm.TerminalController()
 
 def info(msg):
-    print time.ctime(),
+    print time.ctime(), \
         " INFO: ", term.render("${YELLOW}%s${NORMAL}"%msg)
 
 def warn(msg):
-    print time.ctime(),
+    print time.ctime(), \
         " WARN: ", term.render("${RED}${BG_WHITE}%s${NORMAL}"%msg)
 
 class MobotScv(rpyc.Service):
