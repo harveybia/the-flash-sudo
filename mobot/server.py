@@ -52,7 +52,7 @@ class MobotScv(rpyc.Service):
     @staticmethod
     def getCameraSnapshot():
         # Returns the snapshot array with BGR in OpenCV nparray format
-        data = np.fromstring(STREAM.getvalue(), dtype=np.utf8)
+        data = np.fromstring(STREAM.getvalue(), dtype=np.uint8)
         return cv2.imdecode(data, 1)
 
     def on_connect(self):
