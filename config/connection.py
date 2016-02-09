@@ -46,6 +46,8 @@ def listenToCam():
 while not terminated:
     c = rpyc.connect(ADDR, PORT)
     c.root.configureVideoStream(TCP_IP, TCP_PORT)
+    T = threading.Thread(target=listenToCam)
+    T.start()
     while transmitting:
         pass
     # Close connection

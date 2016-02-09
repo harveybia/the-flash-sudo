@@ -20,7 +20,6 @@ STREAM = io.BytesIO()
 CAMERA = picamera.PiCamera()
 
 sock = socket.socket()
-sock.connect((TCP_IP, TCP_PORT))
 
 term = easyterm.TerminalController()
 
@@ -31,6 +30,14 @@ def info(msg):
 def warn(msg):
     print time.ctime(), \
         " WARN: ", term.render("${RED}${BG_WHITE}%s${NORMAL}"%msg)
+
+def debugConnection(addr, port):
+    warn("connection timed out, plesae check listener status")
+    print "detailed Report:"
+    print term.render("${RED}IP_ADDR: ${GREEN}%s${NORMAL}"%addr)
+    print term.render("${RED}PORT: : ${GREEN}%d${NORMAL}"%port)
+    print term.render("${RED}connection timed out after %.3f seconds \
+        ${NORMAL}" %sock.gettimeout())
 
 class MobotScv(rpyc.Service):
     def __init__(self, *args, **kwargs):
@@ -56,6 +63,10 @@ class MobotScv(rpyc.Service):
         TCP_IP = addr
         TCP_PORT = port
         info("configured cam stream addr: %s, port: %d"%(TCP_IP, TCP_PORT))
+        try:
+            sock.connect((TCP_IP, TCP_PORT))
+        except socket.timeout:
+            debugConnection(TCP_IP, TCP_PORT)
 
     def exposed_getBattery(self):
         return 100
@@ -89,12 +100,8 @@ class MobotScv(rpyc.Service):
             sock.send(stringData)
             info("snapshot sent successfully")
         except socket.timeout:
-            warn("connection timed out, plesae check listener status")
-            print "detailed Report:"
-            print term.render("${RED}IP_ADDR: ${GREEN}%s${NORMAL}"%TCP_IP)
-            print term.render("${RED}PORT: : ${GREEN}%d${NORMAL}"%TCP_PORT)
-            print term.render("${RED}connection timed out after %.3f seconds \
-                ${NORMAL}" %sock.gettimeout())
+            debugConnection(TCP_IP, TCP_PORT)
+
         info("closing socket")
         sock.close()
 
