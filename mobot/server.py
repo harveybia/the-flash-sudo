@@ -42,10 +42,12 @@ def debugConnection(addr, port):
 class MobotScv(rpyc.Service):
     def __init__(self, *args, **kwargs):
         rpyc.Service.__init__(self, *args, **kwargs)
-        info("starting camera preview, salibrating Color")
+        info("starting camera preview, calibrating color")
         CAMERA.start_preview()
         info("preview complete, capturing footage into stream")
         CAMERA.capture(STREAM, format='jpeg', resize=(320, 240))
+
+        self.connected = False
 
     @staticmethod
     def getCameraSnapshot():
@@ -63,10 +65,12 @@ class MobotScv(rpyc.Service):
         TCP_IP = addr
         TCP_PORT = port
         info("configured cam stream addr: %s, port: %d"%(TCP_IP, TCP_PORT))
-        try:
-            sock.connect((TCP_IP, TCP_PORT))
-        except socket.timeout:
-            debugConnection(TCP_IP, TCP_PORT)
+        if not self.connected:
+            try:
+                sock.connect((TCP_IP, TCP_PORT))
+                self.connected = True
+            except socket.timeout:
+                debugConnection(TCP_IP, TCP_PORT)
 
     def exposed_getBattery(self):
         return 100

@@ -3,10 +3,11 @@ import socket
 import cv2
 import numpy as np
 import threading
+import time
 
 # My Cam Listener TCP addr
 TCP_IP = socket.gethostname()
-TCP_PORT = 15122
+TCP_PORT = 15112
 terminated = False
 transmitting = False
 
@@ -25,11 +26,11 @@ def recvall(sock, count):
 def listenToCam():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((TCP_IP, TCP_PORT))
-    print "listening to %d:%d"%(TCP_IP, TCP_PORT)
+    print "listening to %s:%d"%(TCP_IP, TCP_PORT)
     s.listen(True)
     conn, addr = s.accept()
     transmitting = True
-    print "accepted connection from %s"%addr
+    print "accepted connection from %s"%str(addr)
 
     length = recvall(conn, 16)
     stringData = recvall(conn, int(length))
@@ -43,13 +44,15 @@ def listenToCam():
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+    s.close()
+
+c = rpyc.connect(ADDR, PORT)
+c.root.configureVideoStream(TCP_IP, TCP_PORT)
 while not terminated:
-    c = rpyc.connect(ADDR, PORT)
-    c.root.configureVideoStream(TCP_IP, TCP_PORT)
     T = threading.Thread(target=listenToCam)
     T.start()
     while transmitting:
         pass
     # Close connection
     time.sleep(2)
-    s.close()
+    c.root.getCameraSnapshot()
