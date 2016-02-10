@@ -22,12 +22,14 @@ CAMERA = picamera.PiCamera()
 term = easyterm.TerminalController()
 
 def info(msg):
-    print time.ctime(), \
-        " INFO: ", term.render("${YELLOW}%s${NORMAL}"%msg)
+    print time.ctime()[11:19], \
+        term.render("${GREEN}[INFO]${NORMAL}", \
+        term.render("${YELLOW}%s${NORMAL}"%msg)
 
 def warn(msg):
-    print time.ctime(), \
-        " WARN: ", term.render("${RED}${BG_WHITE}%s${NORMAL}"%msg)
+    print time.ctime()[11:19], \
+        term.render("${RED}${BG_WHITE}[WARN]${NORMAL}", \
+        term.render("${RED}%s${NORMAL}"%msg)
 
 def debugConnection(sock, addr, port):
     warn("connection timed out, plesae check listener status")
@@ -92,7 +94,12 @@ class MobotScv(rpyc.Service):
         # It will probably block the main thread
         # GrayScale = True
         sock = socket.socket()
-        sock.connect((TCP_IP, TCP_PORT))
+        info("trying to connect to %s:%d"%(TCP_IP, TCP_PORT))
+        try:
+            sock.connect((TCP_IP, TCP_PORT))
+        except:
+            debugConnection(sock, TCP_IP, TCP_PORT)
+            return
 
         info("cam snapshot requested")
         img = MobotScv.getCameraSnapshot()

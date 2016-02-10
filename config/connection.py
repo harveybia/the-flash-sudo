@@ -24,12 +24,12 @@ def recvall(sock, count):
     return buf
 
 def listenToCam():
+    transmitting = True
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((TCP_IP, TCP_PORT))
+    s.bind(("", TCP_PORT))
     print "listening to %s:%d"%(TCP_IP, TCP_PORT)
     s.listen(True)
     conn, addr = s.accept()
-    transmitting = True
     print "accepted connection from %s"%str(addr)
 
     length = recvall(conn, 16)
@@ -44,6 +44,7 @@ def listenToCam():
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+    print "closing socket"
     s.close()
 
 c = rpyc.connect(ADDR, PORT)
@@ -55,4 +56,5 @@ while not terminated:
         pass
     # Close connection
     time.sleep(2)
+    print "fetching camera snapshot"
     c.root.getCameraSnapshot()
