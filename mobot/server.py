@@ -18,6 +18,11 @@ CAMERA = picamera.PiCamera()
 
 term = easyterm.TerminalController()
 
+def init(msg):
+    print time.ctime()[11:19], \
+        term.render("${GREEN}${BG_CYAN}[INIT]${NORMAL}"), \
+        term.render("${YELLOW}%s${NORMAL}"%msg)
+
 def info(msg):
     print time.ctime()[11:19], \
         term.render("${GREEN}[INFO]${NORMAL}"), \
@@ -113,5 +118,6 @@ class MobotScv(rpyc.Service):
         sock.close()
 
 if __name__ == "__main__":
+    init("initiating server")
     server = ThreadedServer(MobotScv, port = 15251)
     server.start()

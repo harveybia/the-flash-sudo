@@ -9,6 +9,7 @@ import time
 TCP_IP = socket.gethostname()
 TCP_PORT = 15112
 terminated = False
+global transmitting
 transmitting = False
 
 # Server addr, should be raspi
@@ -24,6 +25,7 @@ def recvall(sock, count):
     return buf
 
 def listenToCam():
+    global transmitting
     transmitting = True
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("", TCP_PORT))
@@ -32,13 +34,12 @@ def listenToCam():
     conn, addr = s.accept()
     print "accepted connection from %s"%str(addr)
 
-    length = recvall(conn, 16)
+    length = recvall(conn, 8000)
     stringData = recvall(conn, int(length))
 
     data = np.fromstring(stringData, dtype='uint8')
     img = cv2.imdecode(data, 1)
 
-    transmitting = False
     # Test Code
     cv2.imshow('Server', img)
     cv2.waitKey(0)
@@ -46,11 +47,14 @@ def listenToCam():
 
     print "closing socket"
     s.close()
+    transmitting = False
 
 c = rpyc.connect(ADDR, PORT)
 c.root.configureVideoStream(TCP_IP, TCP_PORT)
 while not terminated:
+    global transmitting
     T = threading.Thread(target=listenToCam)
+    T.daemon = True
     T.start()
     while transmitting:
         pass
