@@ -23,12 +23,12 @@ term = easyterm.TerminalController()
 
 def info(msg):
     print time.ctime()[11:19], \
-        term.render("${GREEN}[INFO]${NORMAL}", \
+        term.render("${GREEN}[INFO]${NORMAL}"), \
         term.render("${YELLOW}%s${NORMAL}"%msg)
 
 def warn(msg):
     print time.ctime()[11:19], \
-        term.render("${RED}${BG_WHITE}[WARN]${NORMAL}", \
+        term.render("${RED}${BG_WHITE}[WARN]${NORMAL}"), \
         term.render("${RED}%s${NORMAL}"%msg)
 
 def debugConnection(sock, addr, port):
