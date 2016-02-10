@@ -56,8 +56,7 @@ class MobotScv(rpyc.Service):
         self.TCP_IP = "128.237.138.121"
         self.TCP_PORT = 15122
 
-    @staticmethod
-    def getCameraSnapshot():
+    def getCameraSnapshot(self):
         # Returns the snapshot array with BGR in OpenCV nparray format
         CAMERA.capture(self.stream, format='jpeg', resize=(320, 240))
         data = np.fromstring(self.stream.getvalue(), dtype=np.uint8)
@@ -103,7 +102,7 @@ class MobotScv(rpyc.Service):
             return
 
         info("cam snapshot requested")
-        img = MobotScv.getCameraSnapshot()
+        img = self.getCameraSnapshot()
 
         encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),90]
         result, imgencode = cv2.imencode('.jpg', img, encode_param)
