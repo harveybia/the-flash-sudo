@@ -53,6 +53,7 @@ class Listener():
         img = cv2.imdecode(data, 1)
 
         # Test Code
+        print img
         print "got image"
         """
         cv2.imshow('Server', img)

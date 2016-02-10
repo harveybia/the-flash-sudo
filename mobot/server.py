@@ -58,6 +58,7 @@ class MobotScv(rpyc.Service):
 
     def getCameraSnapshot(self):
         # Returns the snapshot array with BGR in OpenCV nparray format
+        self.stream = io.BytesIO()
         CAMERA.capture(self.stream, format='jpeg', resize=(320, 240))
         data = np.fromstring(self.stream.getvalue(), dtype=np.uint8)
         return cv2.imdecode(data, 1)
