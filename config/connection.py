@@ -33,6 +33,8 @@ class Listener():
 
     def listenToCam(self):
         self.transmitting = True
+        self.processed = False
+
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.bind(("", TCP_PORT))
         print "listening to %s:%d"%(TCP_IP, TCP_PORT)
@@ -42,7 +44,6 @@ class Listener():
 
         conn, addr = self.s.accept()
         print "accepted connection from %s"%str(addr)
-        self.processed = False
 
         length = recvall(conn, 16)
         print "length: %d"%int(length)
@@ -64,7 +65,6 @@ class Listener():
         return img
 
 if __name__ == "__main__":
-    pool = ThreadPool(processes=1)
     l = Listener()
     while not l.terminated:
         """
@@ -72,6 +72,7 @@ if __name__ == "__main__":
         T.daemon = True
         T.start()
         """
+        pool = ThreadPool(processes=1)
         async_img = pool.apply_async(l.listenToCam)
         while l.transmitting:
             time.sleep(0.01)
@@ -86,6 +87,7 @@ if __name__ == "__main__":
         cv2.imshow('Server', img)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+        cv2.waitKey(1)
         print "process completed"
 
 """
