@@ -4,13 +4,12 @@ import cv2
 import numpy as np
 import threading
 import time
+from multiprocessing.pool import ThreadPool
 
 # My Cam Listener TCP addr
 TCP_IP = socket.gethostname()
 TCP_PORT = 15112
 terminated = False
-global transmitting
-transmitting = False
 
 # Server addr, should be raspi
 ADDR, PORT = "128.237.141.170", 15251
@@ -24,35 +23,75 @@ def recvall(sock, count):
         count -= len(newbuf)
     return buf
 
-def listenToCam():
-    global transmitting
-    transmitting = True
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(("", TCP_PORT))
-    print "listening to %s:%d"%(TCP_IP, TCP_PORT)
-    s.listen(True)
-    conn, addr = s.accept()
-    print "accepted connection from %s"%str(addr)
+class Listener():
+    def __init__(self):
+        self.transmitting = False
+        self.processed = True
+        self.terminated = False
+        self.c = rpyc.connect(ADDR, PORT)
+        self.c.root.configureVideoStream(TCP_IP, TCP_PORT)
 
-    length = recvall(conn, 8000)
-    stringData = recvall(conn, int(length))
+    def listenToCam(self):
+        self.transmitting = True
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.s.bind(("", TCP_PORT))
+        print "listening to %s:%d"%(TCP_IP, TCP_PORT)
+        self.s.listen(True)
+        print "listen invoked"
+        self.transmitting = False
 
-    data = np.fromstring(stringData, dtype='uint8')
-    img = cv2.imdecode(data, 1)
+        conn, addr = self.s.accept()
+        print "accepted connection from %s"%str(addr)
+        self.processed = False
 
-    # Test Code
-    cv2.imshow('Server', img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+        length = recvall(conn, 16)
+        print "length: %d"%int(length)
+        stringData = recvall(conn, int(length))
 
-    print "closing socket"
-    s.close()
-    transmitting = False
+        data = np.fromstring(stringData, dtype='uint8')
+        img = cv2.imdecode(data, 1)
 
+        # Test Code
+        print "got image"
+        """
+        cv2.imshow('Server', img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        """
+        print "closing socket"
+        self.s.close()
+        self.processed = True
+        return img
+
+if __name__ == "__main__":
+    pool = ThreadPool(processes=1)
+    l = Listener()
+    while not l.terminated:
+        """
+        T = threading.Thread(target=l.listenToCam)
+        T.daemon = True
+        T.start()
+        """
+        async_img = pool.apply_async(l.listenToCam)
+        while l.transmitting:
+            time.sleep(0.01)
+        print "TCP listening: %s:%d"%(TCP_IP, TCP_PORT)
+        print "fetehing camera snapshot"
+        l.c.root.getCameraSnapshot()
+        while not l.processed:
+            time.sleep(0.01)
+
+        img = async_img.get()
+        print img.size
+        cv2.imshow('Server', img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        print "process completed"
+
+"""
 c = rpyc.connect(ADDR, PORT)
 c.root.configureVideoStream(TCP_IP, TCP_PORT)
 while not terminated:
-    global transmitting
     T = threading.Thread(target=listenToCam)
     T.daemon = True
     T.start()
@@ -62,3 +101,4 @@ while not terminated:
     time.sleep(2)
     print "fetching camera snapshot"
     c.root.getCameraSnapshot()
+"""

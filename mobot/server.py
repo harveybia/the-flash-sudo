@@ -38,6 +38,7 @@ def debugConnection(sock, addr, port):
     print "detailed Report:"
     print term.render("${RED}IP_ADDR: ${GREEN}%s${NORMAL}"%addr)
     print term.render("${RED}PORT: : ${GREEN}%d${NORMAL}"%port)
+    if not sock.gettimeout(): return
     print term.render("${RED}connection timed out after %.3f seconds \
         ${NORMAL}" %sock.gettimeout())
 
