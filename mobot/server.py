@@ -13,9 +13,6 @@ from rpyc.utils.server import ThreadedServer
 # This is the mobot Backend Service
 # Can expose service locally for algorithmic clients to send Instructions
 
-# IP Address for camera data stream host target
-TCP_IP = '128.237.138.121'
-TCP_PORT = 15122
 STREAM = io.BytesIO()
 CAMERA = picamera.PiCamera()
 
@@ -48,6 +45,9 @@ class MobotScv(rpyc.Service):
         CAMERA.capture(STREAM, format='jpeg', resize=(320, 240))
 
         self.connected = False
+        # IP Address for camera data stream host target
+        self.TCP_IP = "128.237.138.121"
+        self.TCP_PORT = 15122
 
     @staticmethod
     def getCameraSnapshot():
@@ -62,17 +62,10 @@ class MobotScv(rpyc.Service):
         info("connection lost")
 
     def exposed_configureVideoStream(self, addr, port):
-        TCP_IP = addr
-        TCP_PORT = port
-        info("configured cam stream addr: %s, port: %d"%(TCP_IP, TCP_PORT))
-        """
-        if not self.connected:
-            try:
-                sock.connect((TCP_IP, TCP_PORT))
-                self.connected = True
-            except socket.timeout:
-                debugConnection(TCP_IP, TCP_PORT)
-        """
+        self.TCP_IP = addr
+        self.TCP_PORT = port
+        info("configured cam stream addr: %s, port: %d" \
+            %(self.TCP_IP, self.TCP_PORT))
 
     def exposed_getBattery(self):
         return 100
@@ -94,11 +87,11 @@ class MobotScv(rpyc.Service):
         # It will probably block the main thread
         # GrayScale = True
         sock = socket.socket()
-        info("trying to connect to %s:%d"%(TCP_IP, TCP_PORT))
+        info("trying to connect to %s:%d"%(self.TCP_IP, self.TCP_PORT))
         try:
-            sock.connect((TCP_IP, TCP_PORT))
+            sock.connect((self.TCP_IP, self.TCP_PORT))
         except:
-            debugConnection(sock, TCP_IP, TCP_PORT)
+            debugConnection(sock, self.TCP_IP, self.TCP_PORT)
             return
 
         info("cam snapshot requested")
@@ -114,7 +107,7 @@ class MobotScv(rpyc.Service):
             sock.send(stringData)
             info("snapshot sent successfully")
         except socket.timeout:
-            debugConnection(sock, TCP_IP, TCP_PORT)
+            debugConnection(sock, self.TCP_IP, self.TCP_PORT)
 
         info("closing socket")
         sock.close()
