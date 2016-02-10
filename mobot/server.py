@@ -13,7 +13,6 @@ from rpyc.utils.server import ThreadedServer
 # This is the mobot Backend Service
 # Can expose service locally for algorithmic clients to send Instructions
 
-STREAM = io.BytesIO()
 CAMERA = picamera.PiCamera()
 
 term = easyterm.TerminalController()
@@ -48,7 +47,9 @@ class MobotScv(rpyc.Service):
         info("starting camera preview, calibrating color")
         CAMERA.start_preview()
         info("preview complete, capturing footage into stream")
-        CAMERA.capture(STREAM, format='jpeg', resize=(320, 240))
+        self.stream = io.BytesIO()
+
+        CAMERA.capture(self.stream, format='jpeg', resize=(320, 240))
 
         self.connected = False
         # IP Address for camera data stream host target
@@ -58,8 +59,8 @@ class MobotScv(rpyc.Service):
     @staticmethod
     def getCameraSnapshot():
         # Returns the snapshot array with BGR in OpenCV nparray format
-        CAMERA.capture(STREAM, format='jpeg', resize=(320, 240))
-        data = np.fromstring(STREAM.getvalue(), dtype=np.uint8)
+        CAMERA.capture(self.stream, format='jpeg', resize=(320, 240))
+        data = np.fromstring(self.stream.getvalue(), dtype=np.uint8)
         return cv2.imdecode(data, 1)
 
     def on_connect(self):
