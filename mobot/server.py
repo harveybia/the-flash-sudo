@@ -55,7 +55,7 @@ def startVideoStream(ADDR, PORT):
     # Make a file-like object out of the connection
     connection = client_socket.makefile('wb')
     try:
-        CAMERA.resolution = (640, 480)
+        CAMERA.resolution = (320, 240)
         # Start a preview and let the camera warm up for 2 seconds
         CAMERA.start_preview()
         time.sleep(2)

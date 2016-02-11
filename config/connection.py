@@ -3,6 +3,7 @@ import socket
 import cv2
 import numpy as np
 import threading
+import io
 import time
 import struct
 from PIL import Image
@@ -48,8 +49,10 @@ if __name__ == "__main__":
 
             data = np.fromstring(image_stream.getvalue(), dtype=np.uint8)
             # "Decode" the image from the array, preserving colour
-            image = cv2.imdecode(data, 1)
-            print type(image)
+            print type(data)
+            #image = cv2.imdecode(data, 1)
+            #cv2.imshow("SERVER", image)
+            #cv2.waitKey(1)
     finally:
         connection.close()
         server_socket.close()
