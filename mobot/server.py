@@ -122,6 +122,7 @@ class MobotScv(rpyc.Service):
             debugConnection(sock, self.TCP_IP, self.TCP_PORT)
 
         info("closing socket")
+        sock.shutdown(socket.SHUT_RDWR)
         sock.close()
 
 if __name__ == "__main__":

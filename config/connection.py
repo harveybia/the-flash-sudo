@@ -12,7 +12,8 @@ TCP_PORT = 15112
 terminated = False
 
 # Server addr, should be raspi
-ADDR, PORT = "128.237.141.170", 15251
+#ADDR, PORT = "128.237.141.170", 15251
+ADDR, PORT = "localhost", 15251
 
 def recvall(sock, count):
     buf = b''
@@ -30,6 +31,7 @@ class Listener():
         self.terminated = False
         self.c = rpyc.connect(ADDR, PORT)
         self.c.root.configureVideoStream(TCP_IP, TCP_PORT)
+        self.image = None
 
     def listenToCam(self):
         self.transmitting = True
@@ -60,20 +62,28 @@ class Listener():
         cv2.destroyAllWindows()
         """
         print "closing socket"
+        try:
+            self.s.shutdown(socket.SHUT_RDWR)
+            print "showdown invoked"
+        except:
+            pass
         self.s.close()
         self.processed = True
-        return img
+        self.image = img
+
+def fetchCallback(arg):
+    print "image ready"
 
 if __name__ == "__main__":
     l = Listener()
     while not l.terminated:
-        """
+
         T = threading.Thread(target=l.listenToCam)
         T.daemon = True
         T.start()
-        """
-        pool = ThreadPool(processes=1)
-        async_img = pool.apply_async(l.listenToCam)
+
+        #pool = ThreadPool(processes=1)
+        #async_img = pool.apply_async(l.listenToCam, callback=fetchCallback)
         while l.transmitting:
             time.sleep(0.001)
         print "TCP listening: %s:%d"%(TCP_IP, TCP_PORT)
@@ -82,13 +92,16 @@ if __name__ == "__main__":
         while not l.processed:
             time.sleep(0.001)
 
-        img = async_img.get()
-        print img.size
-        cv2.imshow('Server', img)
+        #l.s.shutdown()
+        time.sleep(0.5)
+
+        #img = async_img.get()
+        ##img = l.image
+        ##print img.size
+        ##cv2.imshow('Server', img)
         #cv2.waitKey(0)
         #cv2.destroyAllWindows()
-        time.sleep(0.1)
-        cv2.waitKey(1)
+        ##cv2.waitKey(1)
         print "process completed"
 
 """
