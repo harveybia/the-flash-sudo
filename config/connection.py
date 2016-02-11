@@ -86,8 +86,8 @@ if __name__ == "__main__":
         img = async_img.get()
         print img.size
         cv2.imshow('Server', img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        #cv2.waitKey(0)
+        #cv2.destroyAllWindows()
         cv2.waitKey(1)
         print "process completed"
 

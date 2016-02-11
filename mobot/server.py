@@ -95,6 +95,7 @@ class MobotScv(rpyc.Service):
         # It will probably block the main thread
         # GrayScale = True
         sock = socket.socket()
+        sock.settimeout(5)
         info("trying to connect to %s:%d"%(self.TCP_IP, self.TCP_PORT))
         try:
             sock.connect((self.TCP_IP, self.TCP_PORT))
