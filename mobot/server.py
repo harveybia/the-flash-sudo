@@ -128,7 +128,7 @@ class MobotScv(rpyc.Service):
         info("starting to serve video stream")
         time.sleep(0.5)
         self.stream_thread = threading.Thread(target=startVideoStream,
-            args=(self.TCP_ADDR, self.TCP_PORT))
+            args=(self.TCP_IP, self.TCP_PORT))
         self.stream_thread.daemon = True
         self.stream_thread.start()
         info("video stream thread initiated")
