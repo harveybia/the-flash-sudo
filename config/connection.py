@@ -53,7 +53,6 @@ class Listener():
         img = cv2.imdecode(data, 1)
 
         # Test Code
-        print img
         print "got image"
         """
         cv2.imshow('Server', img)
@@ -76,18 +75,19 @@ if __name__ == "__main__":
         pool = ThreadPool(processes=1)
         async_img = pool.apply_async(l.listenToCam)
         while l.transmitting:
-            time.sleep(0.01)
+            time.sleep(0.001)
         print "TCP listening: %s:%d"%(TCP_IP, TCP_PORT)
         print "fetehing camera snapshot"
         l.c.root.getCameraSnapshot()
         while not l.processed:
-            time.sleep(0.01)
+            time.sleep(0.001)
 
         img = async_img.get()
         print img.size
         cv2.imshow('Server', img)
         #cv2.waitKey(0)
         #cv2.destroyAllWindows()
+        time.sleep(0.1)
         cv2.waitKey(1)
         print "process completed"
 
