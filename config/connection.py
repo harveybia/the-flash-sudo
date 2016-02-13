@@ -31,7 +31,6 @@ if __name__ == "__main__":
     c.root.startVideoStream()
     # Accept a single connection and make a file-like object out of it
     connection = server_socket.accept()[0].makefile('rb')
-    i = 0
     try:
         while True:
             # Read the length of the image as a 32-bit unsigned int. If the
@@ -53,8 +52,6 @@ if __name__ == "__main__":
             image = cv2.imdecode(data, 1)
             cv2.imshow("SERVER", image)
             cv2.waitKey(1)
-            i += 1
-            print i
     finally:
         connection.close()
         server_socket.close()
