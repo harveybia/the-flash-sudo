@@ -87,7 +87,7 @@ def startVideoStream(ADDR, PORT):
 def startVideoStream_H264(ADDR, PORT):
     info("setting up streaming socket")
     server_socket = socket.socket()
-    server_socket.bind('', 15252)
+    server_socket.bind(('', 15252))
     server_socket.listen(0)
 
     # Make a file-like object out of the connection
