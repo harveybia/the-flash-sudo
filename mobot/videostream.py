@@ -19,3 +19,6 @@ def startServing():
     s.listen(0)
     conn = s.accept()[0].makefile('wb')
     cam.start_recording(conn, format='h264')
+
+    conn.close()
+    s.close()
