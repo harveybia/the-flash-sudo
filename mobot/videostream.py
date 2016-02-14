@@ -1,5 +1,6 @@
 import picamera
 import socket
+import time
 
 ADDR, PORT = "", 15252
 
