@@ -3,14 +3,16 @@ import socket
 import time
 
 ADDR, PORT = "", 15252
+RESOLUTION = (320, 240)
+FRAMERATE = 10
 
 def startServing():
     s = socket.socket()
     s.bind((ADDR, PORT))
     s.listen(0)
     cam = picamera.PiCamera()
-    cam.resolution = (320, 240)
-    cam.framerate = 24
+    cam.resolution = RESOLUTION
+    cam.framerate = FRAMERATE
     cam.start_preview()
     time.sleep(0.5)
 
