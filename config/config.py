@@ -89,7 +89,7 @@ def getMobotStatus():
     pass
 
 @profile
-def sampleContourArray(img, interval=13):
+def sampleContourArray(img, interval=12, injective=False):
     h = img.shape[1]
     w = img.shape[0]
     # We sample the processed, contour image to produce a set
@@ -97,35 +97,39 @@ def sampleContourArray(img, interval=13):
     # Here we sample the image with interval of size of stroke = 3
 
     # List for data point storage
+    P = []
     points = {}
-
     for x in xrange(w-1):
         for y in reversed(xrange(h-1)):
             if x % interval == 0 and y % interval == 0:
                 pixel = img[x, y]
                 if pixel[0] == 0 and pixel[1] == 255 and pixel[2] == 0:
-                    points[x] = y
+                    if injective:
+                        points[x] = y
+                    else:
+                        P.append((x, y))
+    if injective:
+        for key in points:
+            P.append((key, points[key]))
 
-    P = []
-    for key in points:
-        P.append((key, points[key]))
+    P = sorted(P)
 
     n = len(P)
     print "points found: %d"%len(P)
     # n = len(P) - 1
     n = n - 1
     # Degree of curve
-    k = 3
+    k = 4
     # property of b-splines: m = n + k + 1
     m = n + k + 1
     # t between clamped ends will be evenly spaced
-    _t = 1 / (m - k * 2)
+    _t = 1.0 / (m - k * 2)
     # clamp ends and get the t between them
     t = k * [0] + [t_ * _t for t_ in xrange(m - (k * 2) + 1)] + [1] * k
-    print t
 
     # Generate curve. Usage: S(x) -> y
     S = bezier.Bspline(P, t, k)
+    #print P
     return S
 
 @profile
@@ -213,12 +217,14 @@ class ConfigurationMainFrame():
         # Since this is a preview configuration algorithm, we are only
         # doing previews with it.
         w = computerVisionImage.shape[0]
-        for x in xrange(w-1):
-            t_ = float(x) / w
-            print t_
+        STEP_N = 1000
+        STEP_SIZE = float(1) / STEP_N
+        for x in xrange(STEP_N):
+            t_ = x * STEP_SIZE
             try:
-                computerVisionImage[x, S(t_)] = [255, 255, 255]
-                print "SUCCESS POINT, x = %d"%x
+                x, y = S(t_)
+                computerVisionImage[int(x), int(y)] = [255, 0, 0]
+                #print "SUCCESS POINT, x = %d"%x
             except:
                 pass
 
