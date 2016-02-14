@@ -85,10 +85,10 @@ def startVideoStream(ADDR, PORT):
         client_socket.close()
 
 def startVideoStream_H264(ADDR, PORT):
-    info("connecting to %s:%d"%(ADDR, PORT))
-    client_socket = socket.socket()
-    client_socket.connect((ADDR, PORT))
-    info("connection successful")
+    info("setting up streaming socket")
+    server_socket = socket.socket()
+    server_socket.bind('', 15252)
+    server_socket.listen(0)
 
     # Make a file-like object out of the connection
     CAMERA.resolution = (320, 240)
@@ -96,7 +96,8 @@ def startVideoStream_H264(ADDR, PORT):
     CAMERA.start_preview()
     time.sleep(1)
 
-    connection = client_socket.makefile('wb')
+    connection = server_socket.accept()[0].makefile('wb')
+    info("connected to %s for video feed"%(str(server_socket.getpeername())))
     try:
         CAMERA.start_recording(connection, format='h264')
         while not VIDEO_TERMINATE:
