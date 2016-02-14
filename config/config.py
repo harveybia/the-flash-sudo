@@ -5,6 +5,7 @@ import logging
 import copy
 import Tkinter as tk
 import numpy as np
+import bezier
 from PIL import Image, ImageTk
 
 import UI_Mobot_Configuration as ui
@@ -88,8 +89,44 @@ def getMobotStatus():
     pass
 
 @profile
-def sampleContourArray(img):
-    return []
+def sampleContourArray(img, interval=13):
+    h = img.shape[1]
+    w = img.shape[0]
+    # We sample the processed, contour image to produce a set
+    # of points for bezier curve approximation
+    # Here we sample the image with interval of size of stroke = 3
+
+    # List for data point storage
+    points = {}
+
+    for x in xrange(w-1):
+        for y in reversed(xrange(h-1)):
+            if x % interval == 0 and y % interval == 0:
+                pixel = img[x, y]
+                if pixel[0] == 0 and pixel[1] == 255 and pixel[2] == 0:
+                    points[x] = y
+
+    P = []
+    for key in points:
+        P.append((key, points[key]))
+
+    n = len(P)
+    print "points found: %d"%len(P)
+    # n = len(P) - 1
+    n = n - 1
+    # Degree of curve
+    k = 3
+    # property of b-splines: m = n + k + 1
+    m = n + k + 1
+    # t between clamped ends will be evenly spaced
+    _t = 1 / (m - k * 2)
+    # clamp ends and get the t between them
+    t = k * [0] + [t_ * _t for t_ in xrange(m - (k * 2) + 1)] + [1] * k
+    print t
+
+    # Generate curve. Usage: S(x) -> y
+    S = bezier.Bspline(P, t, k)
+    return S
 
 @profile
 def calculateDesiredVelocityVector():
@@ -169,7 +206,21 @@ class ConfigurationMainFrame():
         # Now we have an image where contours are detected
         # We sample the transformed image and try to use Bezier
         # Approximation to deduce a continous differentiable curve.
+        S = sampleContourArray(computerVisionImage)
 
+        # The curve is supposed to be used for mathematical evaluation
+        # algorithm that determines how the robot should move.
+        # Since this is a preview configuration algorithm, we are only
+        # doing previews with it.
+        w = computerVisionImage.shape[0]
+        for x in xrange(w-1):
+            t_ = float(x) / w
+            print t_
+            try:
+                computerVisionImage[x, S(t_)] = [255, 255, 255]
+                print "SUCCESS POINT, x = %d"%x
+            except:
+                pass
 
         # Convert To Tkinter images, should not be timed.
         originalImage = grayToTkImage(originalImage)
