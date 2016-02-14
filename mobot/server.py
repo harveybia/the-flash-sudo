@@ -16,7 +16,7 @@ from rpyc.utils.server import ThreadedServer
 # Can expose service locally for algorithmic clients to send Instructions
 
 CAMERA = picamera.PiCamera()
-
+VIDEO_TERMINATE = False
 term = easyterm.TerminalController()
 
 def init(msg):
@@ -58,7 +58,7 @@ def startVideoStream(ADDR, PORT):
         CAMERA.resolution = (320, 240)
         # Start a preview and let the camera warm up for 2 seconds
         CAMERA.start_preview()
-        time.sleep(2)
+        time.sleep(1)
 
         # Note the start time and construct a stream to hold image data
         # temporarily (we could write it directly to connection but in this
@@ -84,6 +84,28 @@ def startVideoStream(ADDR, PORT):
         connection.close()
         client_socket.close()
 
+def startVideoStream_H264(ADDR, PORT):
+    info("connecting to %s:%d"%(ADDR, PORT))
+    client_socket = socket.socket()
+    client_socket.connect((ADDR, PORT))
+    info("connection successful")
+
+    # Make a file-like object out of the connection
+    CAMERA.resolution = (320, 240)
+    CAMERA.framerate = 24
+    CAMERA.start_preview()
+    time.sleep(1)
+
+    connection = client_socket.makefile('wb')
+    try:
+        CAMERA.start_recording(connection, format='h264')
+        while not VIDEO_TERMINATE:
+            pass
+        CAMERA.stop_recording()
+    finally:
+        connection.close()
+        client_socket.close()
+
 class MobotScv(rpyc.Service):
     def __init__(self, *args, **kwargs):
         rpyc.Service.__init__(self, *args, **kwargs)
@@ -92,6 +114,7 @@ class MobotScv(rpyc.Service):
         info("preview complete, capturing footage into stream")
         self.stream = io.BytesIO()
         self.stream_thread = None
+        self.stream_H264_thread = None
 
         CAMERA.capture(self.stream, format='jpeg', resize=(320, 240))
 
@@ -120,13 +143,22 @@ class MobotScv(rpyc.Service):
             %(self.TCP_IP, self.TCP_PORT))
 
     def exposed_startVideoStream(self):
-        info("starting to serve video stream")
+        info("starting to serve time lapse")
         time.sleep(0.5)
         self.stream_thread = threading.Thread(target=startVideoStream,
             args=(self.TCP_IP, self.TCP_PORT))
         self.stream_thread.daemon = True
         self.stream_thread.start()
         info("video stream thread initiated")
+
+    def exposed_startVideoStream_H264(self):
+        info('starting to serve continuous H264 video stream')
+        time.sleep(0.5)
+        self.stream_H264_thread = threading.Thread(target=startVideoStream_H264,
+            args=(self.TCP_IP, self.TCP_PORT))
+        self.stream_H264_thread.daemon = True
+        self.stream_H264_thread.start()
+        info('H264 stream thread initiated')
 
     def exposed_getBattery(self):
         return 100
