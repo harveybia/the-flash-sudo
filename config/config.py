@@ -10,6 +10,13 @@ from PIL import Image, ImageTk
 
 import UI_Mobot_Configuration as ui
 
+class ParameterInvalidException(Exception):
+    def __init__(self, description):
+        self.des = description
+
+    def __str__(self):
+        return repr(self.des)
+
 def profile(fn):
     # A decorator function to determine the run time of functions
     def with_profiling(*args, **kwargs):
@@ -22,7 +29,7 @@ def profile(fn):
 
 ex_img = cv2.imread('../tests/1.JPG',0)
 
-WIDTH, HEIGHT = ex_img.shape
+HEIGHT, WIDTH = ex_img.shape
 ex_img = cv2.resize(ex_img, dsize=(WIDTH//16, HEIGHT//16))
 blurred = cv2.medianBlur(ex_img, 5)
 #blurred = cv2.GaussianBlur(ex_img, (5,5), 0)
@@ -88,10 +95,65 @@ def getMobotStatus():
     # -------------------- more to come.
     pass
 
+def _isPotentialTrackingPoint(grayimg, pt):
+    # Using threshold value to identify whether it is a valid point
+    # @param:
+    # grayimg: (ndarray) the image with one channel: graysacle
+    # pt: ([2D]tuple) the point to check
+
+    threshold = 200 # Example Value
+    samplesize = 4 # Look 5 units before and after each dimension
+                   # This implies that there are 8 * 8 = 64 validation points
+    certainty = 0.7 # Ratio of valid points within sample square
+
+    h, w = grayimg.shape[0], grayimg.shape[1]
+    cx, cy = pt[0], pt[1] # Center coordinates
+    if grayimg[cx, cy] > threshold:
+        # The point satisifies threshold, we look at a square near it
+        # and increment validcount as we find more valid pixels
+        validcount = 0
+        for x in xrange(cx - samplesize, cx + samplesize + 1):
+            for y in xrange(xy - samplesize, cy + samplesize + 1):
+                if (0 <= x and x < w) and (0 <= y and y < h):
+                    # Valid dimensions, index within bounds
+                    if grayimg[x, y] > threshold: validcount += 1
+        # We have a count of valid points, compare it with threshold count
+        if validcount > certainty * samplesize ** 2: return True
+    return False
+
+def samplePoints(img, isTrackingPt,
+    basis=(0,-1), n=5, radius=6, a=0.6, b=0.3, c=0.1):
+    # @param:
+    # img: (nparray) the image we want to process, with channel being !BGR!
+    # isTrackingPt: (grayimg, pt) -> bool
+    #   A function that determines whether the point is a tracking point or not
+    # basis: ([2D]tuple) the origin vector for probabilistic sampling circle
+    #   which directs to direction of highest favorability
+    # n: number of points we wish to sample
+    # radius: radius of circle within which we want to search for points
+
+    # Mathematically speaking, n * radius should be less than height of image
+    # Test if parameters are valid:
+    with img.shape[0] as height:
+        if height / radius - 1 <= n:
+            raise ParameterInvalidException("sampling circles exceed maximum")
+        if type(img) is not numpy.ndarray:
+            raise ParameterInvalidException("input image not valid ndarray")
+
+    grayimg = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+
+
+
+
+    # Now we build a probabilistic model
+
+
+
 @profile
 def sampleContourArray(img, interval=12, injective=False):
-    h = img.shape[1]
-    w = img.shape[0]
+    #TODO: This function has malfunctioning x, y correspondance.
+    h = img.shape[0]
+    w = img.shape[1]
     # We sample the processed, contour image to produce a set
     # of points for bezier curve approximation
     # Here we sample the image with interval of size of stroke = 3
@@ -102,7 +164,7 @@ def sampleContourArray(img, interval=12, injective=False):
     for x in xrange(w-1):
         for y in reversed(xrange(h-1)):
             if x % interval == 0 and y % interval == 0:
-                pixel = img[x, y]
+                pixel = img[y, x]
                 if pixel[0] == 0 and pixel[1] == 255 and pixel[2] == 0:
                     if injective:
                         points[x] = y
@@ -216,14 +278,14 @@ class ConfigurationMainFrame():
         # algorithm that determines how the robot should move.
         # Since this is a preview configuration algorithm, we are only
         # doing previews with it.
-        w = computerVisionImage.shape[0]
+        w = computerVisionImage.shape[1]
         STEP_N = 1000
         STEP_SIZE = float(1) / STEP_N
         for x in xrange(STEP_N):
             t_ = x * STEP_SIZE
             try:
                 x, y = S(t_)
-                computerVisionImage[int(x), int(y)] = [255, 0, 0]
+                computerVisionImage[int(y), int(x)] = [255, 0, 0]
                 #print "SUCCESS POINT, x = %d"%x
             except:
                 pass
