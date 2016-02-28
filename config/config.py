@@ -6,6 +6,8 @@ import copy
 import Tkinter as tk
 import numpy as np
 import bezier
+import math
+import itertools
 from PIL import Image, ImageTk
 
 import UI_Mobot_Configuration as ui
@@ -30,7 +32,7 @@ def profile(fn):
 ex_img = cv2.imread('../tests/1.JPG',0)
 
 HEIGHT, WIDTH = ex_img.shape
-ex_img = cv2.resize(ex_img, dsize=(WIDTH//16, HEIGHT//16))
+ex_img = cv2.resize(ex_img, dsize=(WIDTH//20, HEIGHT//20))
 blurred = cv2.medianBlur(ex_img, 5)
 #blurred = cv2.GaussianBlur(ex_img, (5,5), 0)
 edges = cv2.Canny(blurred,0,500)
@@ -61,6 +63,10 @@ def findEdges(img, blur_factor, edge_low, edge_high):
     blurred = cv2.medianBlur(img, int(blur_factor//2*2+1))
     edges = cv2.Canny(blurred, edge_low, edge_high)
     return edges
+
+@profile
+def findBlurred(img, blur_factor):
+    return cv2.medianBlur(img, int(blur_factor//2*2+1))
 
 @profile
 def findContours(img):
@@ -95,6 +101,10 @@ def getMobotStatus():
     # -------------------- more to come.
     pass
 
+def isValidPt(img, x, y):
+    h, w = img.shape[0], img.shape[1]
+    return (0 <= x and x < w) and (0 <= y and y < h)
+
 def _isPotentialTrackingPoint(grayimg, pt):
     # Using threshold value to identify whether it is a valid point
     # @param:
@@ -108,46 +118,130 @@ def _isPotentialTrackingPoint(grayimg, pt):
 
     h, w = grayimg.shape[0], grayimg.shape[1]
     cx, cy = pt[0], pt[1] # Center coordinates
-    if grayimg[cx, cy] > threshold:
+    if grayimg[cy, cx] > threshold:
         # The point satisifies threshold, we look at a square near it
         # and increment validcount as we find more valid pixels
+        totalcount = samplesize ** 2
         validcount = 0
         for x in xrange(cx - samplesize, cx + samplesize + 1):
-            for y in xrange(xy - samplesize, cy + samplesize + 1):
-                if (0 <= x and x < w) and (0 <= y and y < h):
+            for y in xrange(cy - samplesize, cy + samplesize + 1):
+                if isValidPt(grayimg, x, y):
                     # Valid dimensions, index within bounds
-                    if grayimg[x, y] > threshold: validcount += 1
+                    if grayimg[y, x] > threshold: validcount += 1
+                else:
+                    totalcount -= 1
         # We have a count of valid points, compare it with threshold count
-        if validcount > certainty * samplesize ** 2: return True
+        if validcount > certainty * totalcount: return True
     return False
 
-def samplePoints(img, isTrackingPt,
-    basis=(0,-1), n=5, radius=6, a=0.6, b=0.3, c=0.1):
+def _getTrackingPointProbability(img, pt):
+    # This is a PMF (Probability Mass Function) for tracking points
     # @param:
-    # img: (nparray) the image we want to process, with channel being !BGR!
-    # isTrackingPt: (grayimg, pt) -> bool
-    #   A function that determines whether the point is a tracking point or not
+    # img: (ndarray) the image with one channel: graysacle
+    # pt: ([2D]tuple) the point to check
+    h, w = img.shape[0], img.shape[1]
+    x, y = pt[0], pt[1]
+    concession = 0.1
+    return min(1 - ((x-w/2)/w)**2 - ((y-h/2)/h)**2, 1 - concession)
+
+def _getNextTrackingPtProbability(img, pt, prevpt, basis,
+    a, b, c):
+    # This is a PMF, for next tracking point position
+    # @param:
+    # img: (ndarray) the image with one channel: grayscale
+    # pt: ([2D]tuple) the point to check
+    # prevpt: ([2D]tuple) the previous tracking point
     # basis: ([2D]tuple) the origin vector for probabilistic sampling circle
     #   which directs to direction of highest favorability
+    # a: (float) the preset probability of alpha region
+    # b: (float) the preset probability of beta region
+    # c: (float) the preset probability of gamma region
+    bx, by = basis[0], basis[1]
+    theta0 = math.atan2(by, bx) # -pi < theta <= pi
+
+    dx, dy = pt[0] - prevpt[0], pt[1] - prevpt[1]
+    dtheta = abs(math.atan2(dy, dx) - theta0)
+    if 0 <= dtheta < math.pi/6:
+        return a
+    elif math.pi/6 <= dtheta < math.pi/2:
+        return b
+    elif math.pi/2 <= dtheta < math.pi:
+        return c
+    else:
+        return 0
+
+def _getPointsAroundPoint(pt, radius, step=200):
+    # Returns a list of points in a disk around pt
+    # @param:
+    # pt: ([2D]tuple) the center point
+    # radius: (int) the radius of disk
+    # step: (float) the step in radian
+    # @returns:
+    # list: collection of points in disk
+    res = []
+    x, y = pt[0], pt[1]
+    for i in xrange(0, step):
+        theta = 2 * math.pi / step * i
+        res.append( (int(x + radius * math.cos(theta)),
+            int(y + radius * math.sin(theta))) )
+    return res
+
+@profile
+def samplePoints(grayimg, isTrackingPt,
+     n=5, radius=6, a=0.6, b=0.3, c=0.1):
+    # @param:
+    # grayimg: (nparray) the image we want to process, in grayscale
+    # isTrackingPt: (grayimg, pt) -> bool
+    #   A function that determines whether the point is a tracking point or not
     # n: number of points we wish to sample
     # radius: radius of circle within which we want to search for points
+    # a: (float) the preset probability of alpha region
+    # b: (float) the preset probability of beta region
+    # c: (float) the preset probability of gamma region
 
     # Mathematically speaking, n * radius should be less than height of image
     # Test if parameters are valid:
-    with img.shape[0] as height:
-        if height / radius - 1 <= n:
-            raise ParameterInvalidException("sampling circles exceed maximum")
-        if type(img) is not numpy.ndarray:
-            raise ParameterInvalidException("input image not valid ndarray")
+    h, w = grayimg.shape[0], grayimg.shape[1]
 
-    grayimg = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+    if h / radius - 1 <= n:
+        raise ParameterInvalidException("sampling circles exceed maximum")
+    if type(grayimg) is not np.ndarray:
+        raise ParameterInvalidException("input image not valid ndarray")
 
+    #grayimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    points = []
 
-
-
-    # Now we build a probabilistic model
-
-
+    # Main loop driving the sampling process
+    basis = [0, -1]
+    for i in xrange(n):
+        # i: the index of tracking point
+        if i == 0:
+            # Base case, we want to find a starting pt to work with
+            best = ((w/2, h - radius), 0.1)
+            for col in xrange(0, w):
+                pt = (col, h - radius)
+                if isTrackingPt(grayimg, pt):
+                    p = _getTrackingPointProbability(grayimg, pt)
+                    if p > best[1]: best = (pt, p)
+            points.append(best[0])
+        else:
+            assert(len(points) > 0)
+            # Work with previous located pt
+            prevpt = points[-1]
+            best = ((0,0), 0)
+            for pt in _getPointsAroundPoint(prevpt, radius):
+                x, y = pt[0], pt[1]
+                if isValidPt(grayimg, x, y) and isTrackingPt(grayimg, pt):
+                    p = _getNextTrackingPtProbability(grayimg, pt, prevpt,
+                        basis, a, b, c)
+                    if p > best[1]: best = (pt, p)
+            points.append(best[0])
+            assert(len(points) > 1)
+            # Update basis
+            basis[0] = points[-1][0] - points[-2][0]
+            basis[1] = points[-1][1] - points[-2][1]
+        i += 1
+    return points
 
 @profile
 def sampleContourArray(img, interval=12, injective=False):
@@ -269,6 +363,15 @@ class ConfigurationMainFrame():
             print "Polys found: %d"%len(contours)
         cv2.drawContours(computerVisionImage, contours, -1, (0, 255, 0), 3)
 
+        blurred = findBlurred(originalImage, BLUR_FACTOR)
+        trackpts = samplePoints(blurred, _isPotentialTrackingPoint,
+            n=5, radius=20)
+        print 'tracking points found:'
+        print trackpts
+        for pt in trackpts:
+            cv2.circle(processedImage, pt, 3, (255, 255, 255))
+
+        """
         # Now we have an image where contours are detected
         # We sample the transformed image and try to use Bezier
         # Approximation to deduce a continous differentiable curve.
@@ -289,7 +392,7 @@ class ConfigurationMainFrame():
                 #print "SUCCESS POINT, x = %d"%x
             except:
                 pass
-
+        """
         # Convert To Tkinter images, should not be timed.
         originalImage = grayToTkImage(originalImage)
         processedImage = grayToTkImage(processedImage)
@@ -299,8 +402,10 @@ class ConfigurationMainFrame():
         ui.w.OriginalImageLabel.image = originalImage
         ui.w.ProcessedImageLabel.configure(image = processedImage)
         ui.w.ProcessedImageLabel.image = processedImage
+        """
         ui.w.CVImageLabel.configure(image = computerVisionImage)
         ui.w.CVImageLabel.image = computerVisionImage
+        """
 
     def updateMobotInfo(self):
         if self.conn == None: return
