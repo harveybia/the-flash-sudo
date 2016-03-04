@@ -54,8 +54,11 @@ class Controller:
             if BrickPi.Sensor[S2]:
                 # This algorithm is used to prevent misinterpretation
                 self.touchcount += 2
+                print "Seen Press, += 2"
                 if self.touchcount > 20:
-                    if self.touchcallback: self.touchcallback()
+                    if self.touchcallback:
+                        self.touchcallback()
+                        self.touchcount = 0
             # Update Encoder Values
             self.encL = BrickPi.Encoder[L]
             self.encR = BrickPi.Encoder[R]
@@ -92,11 +95,13 @@ if __name__ == "__main__":
     print "Started Controller Instance"
     time.sleep(0.5)
     print "Testing Motors:"
+    print "Forward 100"
     con.setMotorSpeed(100, 100)
     time.sleep(2)
+    print "Backward 100"
     con.setMotorSpeed(-100, -100)
     time.sleep(2)
 
     print "Testing Sensors:"
     print "<Press S2 to test callback, strike enter to quit>"
-    rawinput()
+    raw_input()
