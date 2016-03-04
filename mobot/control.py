@@ -85,7 +85,8 @@ if __name__ == "__main__":
 
     con = Controller()
     con.setTouchCallback(isTouched)
-    thd = threading.Thread(target=mainloop, args=(con,), daemon=True)
+    thd = threading.Thread(target=mainloop, args=(con,))
+    thd.daemon = True
     thd.start()
 
     print "Started Controller Instance"
