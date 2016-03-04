@@ -26,9 +26,9 @@ class ParameterInvalidException(Exception):
     def __str__(self):
         return repr(self.des)
 
-# Left and Right Sensors:
-BrickPi.MotorEnable[L] # LEFT
-BrickPi.MotorEnable[R] # RIGHT
+# Left and Right Motors:
+BrickPi.MotorEnable[L] = 1 # LEFT
+BrickPi.MotorEnable[R] = 1 # RIGHT
 
 # Touch Sensor Initialization:
 BrickPi.SensorType[S2] = TYPE_SENSOR_EV3_TOUCH_DEBOUNCE
