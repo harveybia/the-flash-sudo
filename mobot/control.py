@@ -19,7 +19,7 @@ BrickPiSetup()
 # Aliasing for ports for convenience
 L = PORT_B
 R = PORT_C
-S2 = PORT_2
+S2 = PORT_4
 
 # Exceptions
 class ParameterInvalidException(Exception):
@@ -54,7 +54,6 @@ class Controller:
             if BrickPi.Sensor[S2]:
                 # This algorithm is used to prevent misinterpretation
                 self.touchcount += 2
-                print "Seen Press, += 2"
                 if self.touchcount > 20:
                     if self.touchcallback:
                         self.touchcallback()
@@ -82,14 +81,14 @@ def mainloop(touchcallback=None):
     encL = 0
     encR = 0
     while 1:
+        touchcount = abs(touchcount - 1)
         result = BrickPiUpdateValues()
         if not result:
             # Successfully updated values
             if BrickPi.Sensor[S2]:
                 # This algorithm is used to prevent misinterpretation
                 touchcount += 2
-                print "Seen Press, += 2"
-                if touchcount > 20:
+                if touchcount > 8:
                     if touchcallback:
                         touchcallback()
                     touchcount = 0
