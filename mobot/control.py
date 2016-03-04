@@ -46,7 +46,7 @@ class Controller:
         self.encL = 0
         self.encR = 0
 
-    def update():
+    def update(self):
         self.touchcount = abs(self.touchcount - 1)
         result = BrickPiUpdateValues()
         if not result:
@@ -61,16 +61,16 @@ class Controller:
             self.encR = BrickPi.Encoder[R]
         time.sleep(0.01)
 
-    def setMotorSpeed(l, r):
+    def setMotorSpeed(self, l, r):
         if abs(l) > 255 or abs(r) > 255:
             raise ParameterInvalidException("Invalid motor speeds")
         BrickPi.MotorSpeed[L] = l
         BrickPi.MotorSpeed[R] = r
 
-    def setTouchCallback(func):
+    def setTouchCallback(self, func):
         self.touchcallback = func
 
-    def getEncoderValues():
+    def getEncoderValues(self):
         # getEncoderValues() -> tuple (x, y)
         return (self.encL, self.encR)
 
