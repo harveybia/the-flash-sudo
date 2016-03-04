@@ -77,15 +77,37 @@ class Controller:
         # getEncoderValues() -> tuple (x, y)
         return (self.encL, self.encR)
 
+def mainloop(touchcallback=None):
+    touchcount = 0
+    encL = 0
+    encR = 0
+    while 1:
+        result = BrickPiUpdateValues()
+        if not result:
+            # Successfully updated values
+            if BrickPi.Sensor[S2]:
+                # This algorithm is used to prevent misinterpretation
+                touchcount += 2
+                print "Seen Press, += 2"
+                if touchcount > 20:
+                    if touchcallback:
+                        touchcallback()
+                    touchcount = 0
+            # Update Encoder Values
+            encL = BrickPi.Encoder[L]
+            encR = BrickPi.Encoder[R]
+        time.sleep(0.01)
+
 if __name__ == "__main__":
     # Unit Test
+    """
     def mainloop(c):
         while 1:
             c.update()
-
+    """
     def isTouched():
         print "S2 Activated"
-
+    """
     con = Controller()
     con.setTouchCallback(isTouched)
     thd = threading.Thread(target=mainloop, args=(con,))
@@ -105,3 +127,5 @@ if __name__ == "__main__":
     print "Testing Sensors:"
     print "<Press S2 to test callback, strike enter to quit>"
     raw_input()
+    """
+    mainloop(isTouched)
