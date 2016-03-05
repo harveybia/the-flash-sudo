@@ -192,7 +192,7 @@ def _getNextTrackingPtProbability(img, pt, prevpt, basis,
     else:
         return 0
 
-def _getPointsAroundPoint(pt, radius, step=200):
+def _getPointsAroundPoint(pt, radius, step=100):
     # Returns a list of points in a disk around pt
     # @param:
     # pt: ([2D]tuple) the center point
@@ -373,7 +373,7 @@ class MobotService(rpyc.Service):
 
         self.values = {
             'BRIG': 0, 'CNST': 50, 'BLUR': 4,
-            'THRS': 150, 'SIZE': 4, 'CERT': 0.7, 'PTS': 5, 'RADI': 10,
+            'THRS': 150, 'SIZE': 4, 'CERT': 0.7, 'PTS': 5, 'RADI': 6,
                 'A': 0.6, 'B': 0.3, 'C': 0.1,
             'TCHS': 0.5, 'GATG': 14, 'MAXS': 100
         }
@@ -421,7 +421,7 @@ class MobotService(rpyc.Service):
         warn("connection lost")
         self._connected = False
         self.loopstop.set()
-        self.exposed_stopVideoStream
+        self.exposed_stopVideoStream()
 
     def exposed_recognized(self):
         return False if self._connected else True
