@@ -192,7 +192,7 @@ def _getNextTrackingPtProbability(img, pt, prevpt, basis,
     else:
         return 0
 
-def _getPointsAroundPoint(pt, radius, step=100):
+def _getPointsAroundPoint(pt, radius, step=200):
     # Returns a list of points in a disk around pt
     # @param:
     # pt: ([2D]tuple) the center point
@@ -410,6 +410,7 @@ class MobotService(rpyc.Service):
         CAMERA.framerate = FRAMERATE
         CAMERA.start_preview()
         time.sleep(0.2)
+        # CAMERA.capture_continuous(self.stream, format='jpeg')
 
     def on_connect(self):
         info("received connection")
@@ -494,6 +495,10 @@ class MobotService(rpyc.Service):
         img = cv2.imdecode(data, 1) # in BGR order
         # Generate grayscale image
         grayimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        print grayimg
+
+        self.stream.seek(0)
+        self.stream.truncate()
         # Blur image
         blurred = findBlurred(grayimg, BLUR_FACTOR)
         # Find tracking points
