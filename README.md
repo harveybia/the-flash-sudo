@@ -15,6 +15,19 @@ Make sure you have the correct paths in your environment.
 For example, sometimes you have pip2 directing to a python2
 pip and use python2 instead of python.
 
+### Deploying dependencies on your RaspberryPi:
+You need to install BrickPi and have the module BrickPi ready and connected
+to your raspberrypi to run the mobot controller.
+
+#### List of dependencies:
+1. OpenCV
+2. python2
+3. numpy
+4. pyserial
+5. BrickPi
+6. rpyc
+7. picamera
+
 ### For Mac Users: First Step
 
 - Get [homebrew]
