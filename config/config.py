@@ -1,3 +1,16 @@
+##################################
+# Mobot Algorithm Design Panel   #
+# copyright 2015-2016 Harvey Shi #
+##################################
+flash = \
+"""
+  __  .__                       _____.__                .__
+_/  |_|  |__   ____           _/ ____\  | _____    _____|  |__
+\   __\  |  \_/ __ \   ______ \   __\|  | \__  \  /  ___/  |  \\
+ |  | |   Y  \  ___/  /_____/  |  |  |  |__/ __ \_\___ \|   Y  \\
+ |__| |___|  /\___  >          |__|  |____(____  /____  >___|  /
+           \/     \/                           \/     \/     \/
+"""
 import cv2
 import time
 import rpyc
@@ -111,7 +124,7 @@ def _isPotentialTrackingPoint(grayimg, pt):
     # grayimg: (ndarray) the image with one channel: graysacle
     # pt: ([2D]tuple) the point to check
 
-    threshold = 200 # Example Value
+    threshold = 180 # Example Value
     samplesize = 4 # Look 5 units before and after each dimension
                    # This implies that there are 8 * 8 = 64 validation points
     certainty = 0.7 # Ratio of valid points within sample square
@@ -228,7 +241,11 @@ def samplePoints(grayimg, isTrackingPt,
             assert(len(points) > 0)
             # Work with previous located pt
             prevpt = points[-1]
-            best = ((0,0), 0)
+            # Predict the next point location. If not found, this is to be
+            # default.
+            # NOTE: It would be possibly better to increase sampling radius
+            # once the previous sampling gave us the less promising result.
+            best = ((prevpt[0] + basis[0], prevpt[1] + basis[1]), 0.1)
             for pt in _getPointsAroundPoint(prevpt, radius):
                 x, y = pt[0], pt[1]
                 if isValidPt(grayimg, x, y) and isTrackingPt(grayimg, pt):
@@ -240,7 +257,8 @@ def samplePoints(grayimg, isTrackingPt,
             # Update basis
             basis[0] = points[-1][0] - points[-2][0]
             basis[1] = points[-1][1] - points[-2][1]
-        i += 1
+            print best
+            print basis
     return points
 
 @profile
@@ -368,8 +386,10 @@ class ConfigurationMainFrame():
             n=5, radius=20)
         print 'tracking points found:'
         print trackpts
+
+        blurred = grayToRGB(blurred)
         for pt in trackpts:
-            cv2.circle(processedImage, pt, 3, (255, 255, 255))
+            cv2.circle(blurred, pt, 2, (255, 0, 0))
 
         """
         # Now we have an image where contours are detected
@@ -395,7 +415,7 @@ class ConfigurationMainFrame():
         """
         # Convert To Tkinter images, should not be timed.
         originalImage = grayToTkImage(originalImage)
-        processedImage = grayToTkImage(processedImage)
+        processedImage = rgbToTkImage(blurred)
         computerVisionImage = rgbToTkImage(computerVisionImage)
 
         ui.w.OriginalImageLabel.configure(image = originalImage)
@@ -414,5 +434,6 @@ class ConfigurationMainFrame():
         ui.w.Label9.config(text=str(batt))
 
 if __name__ == "__main__":
+    print flash
     MainFrame = ConfigurationMainFrame()
     ui.vp_start_gui()
