@@ -43,21 +43,25 @@ class Controller:
     def __init__(self):
         self.touchcallback = None
         self.touchcount = 0
+        self.vL = 0
+        self.vR = 0
         self.encL = 0
         self.encR = 0
 
     def update(self):
         self.touchcount = abs(self.touchcount - 1)
+        BrickPi.MotorSpeed[L] = self.vL
+        BrickPi.MotorSpeed[R] = self.vR
         result = BrickPiUpdateValues()
         if not result:
             # Successfully updated values
             if BrickPi.Sensor[S2]:
                 # This algorithm is used to prevent misinterpretation
                 self.touchcount += 2
-                if self.touchcount > 20:
+                if self.touchcount > 8:
                     if self.touchcallback:
                         self.touchcallback()
-                        self.touchcount = 0
+                    self.touchcount = 0
             # Update Encoder Values
             self.encL = BrickPi.Encoder[L]
             self.encR = BrickPi.Encoder[R]
@@ -66,8 +70,9 @@ class Controller:
     def setMotorSpeed(self, l, r):
         if abs(l) > 255 or abs(r) > 255:
             raise ParameterInvalidException("Invalid motor speeds")
-        BrickPi.MotorSpeed[L] = l
-        BrickPi.MotorSpeed[R] = r
+        self.vL = l; self.vR = r
+        # BrickPi.MotorSpeed[L] = l
+        # BrickPi.MotorSpeed[R] = r
 
     def setTouchCallback(self, func):
         self.touchcallback = func
