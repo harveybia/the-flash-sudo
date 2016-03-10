@@ -125,8 +125,8 @@ def _isPotentialTrackingPoint(grayimg, pt):
     # pt: ([2D]tuple) the point to check
 
     threshold = 180 # Example Value
-    samplesize = 4 # Look 5 units before and after each dimension
-                   # This implies that there are 8 * 8 = 64 validation points
+    samplesize = 4 # Look 4 units before and after each dimension
+                   # This implies that there are 9 * 9 = 81 validation points
     certainty = 0.7 # Ratio of valid points within sample square
 
     h, w = grayimg.shape[0], grayimg.shape[1]
