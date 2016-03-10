@@ -43,7 +43,7 @@ SLIDE_KEYS = [
 
 speaklog("system initializing", block=True)
 
-class Interface(rpyc.Service):
+class InterfaceService(rpyc.Service):
     def __init__(self, *args, **kwargs):
         rpyc.Service.__init__(self, *args, **kwargs)
         speaklog("service instance created")
@@ -100,9 +100,10 @@ class Interface(rpyc.Service):
         # filterstates: (dict) the state list of fliter
         # taskstates: (dict) the state list of task
         # slides: (dict) the values of slidebars
-        assert(set(filterstates.keys()) == set(FILTER_KEYS))
-        assert(set(taskstates.keys()) == set(TASK_KEYS))
-        assert(set(slides.keys()) == set(SLIDE_KEYS))
+
+        #assert(set(filterstates.keys()) == set(FILTER_KEYS))
+        #assert(set(taskstates.keys()) == set(TASK_KEYS))
+        #assert(set(slides.keys()) == set(SLIDE_KEYS))
 
         # Tell filter status
         for key in filterstates:
@@ -124,6 +125,6 @@ class Interface(rpyc.Service):
 
 if __name__ == "__main__":
     info("initiating server")
-    server = ThreadedServer(Interface, port = 15251)
+    server = ThreadedServer(InterfaceService, port = 15251)
     speaklog("ready to accept connections")
     server.start()

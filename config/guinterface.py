@@ -8,10 +8,11 @@ import math
 import random
 import os
 import time
+import rpyc
 from Tkinter import *
 import subprocess
 
-
+ADDR, PORT = 'localhost', 15251
 
 class Application(object):
     # Override these methods when creating your own animation
@@ -97,6 +98,8 @@ class Interface(Application):
         self.chosenList = [True] + [False] * 7 + [True] + [False] * 7
         self.valueList = [0] * 14
         self.startRun = False
+
+        self.conn = rpyc.connect(ADDR, PORT)
 
     def getMonitorSelectorList(self):
         return ["ORIG", "PROC", "B/W",    "IRNV",
@@ -215,11 +218,8 @@ class Interface(Application):
 
     def sendData(self):
         filterDic, taskDic, slideDic = self.getData()
-        print filterDic
-        print taskDic
-        print slideDic
-
-        # TODO: to implement the data transfer protocol
+        # data transfer protocol
+        self.conn.root.updateValues(filterDic, taskDic, slideDic)
 
     def getData(self):
         FILTER_KEYS   = ['ORIG', 'PROC', 'BW', 'IRNV', 'CV', 'PRED', 'HYBR', 'BLUR']
