@@ -83,6 +83,10 @@ class InterfaceService(rpyc.Service):
     def on_disconnect(self):
         speaklog("connection lost")
 
+    def exposed_resetStatus(self):
+        speaklog('status reset')
+        # TODO: do something to reset status
+
     def exposed_abortMission(self):
         if self.taskrunning:
             self.taskrunning = False

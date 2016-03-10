@@ -200,10 +200,16 @@ class Interface(Application):
         # for reset button #
         if self.hoverList[12] == True:
             self.chosenList[12] = False
+            self.conn.root.resetStatus()
+            return
+        # for start button #
+        elif self.hoverList[11] == True:
+            self.conn.root.startMission()
             return
         # for abort button #
         elif self.hoverList[15] == True:
             self.chosenList[15] = False
+            self.conn.root.abortMission()
             return
         # other buttons #
         elif x0<=x<=x1 and y0<=y<=y1:
@@ -213,7 +219,7 @@ class Interface(Application):
                     return
         elif x0<=x<=x1 and y2<=y<=y3:
             for i in xrange(8, 16):
-                if self.hoverList[i] == True and i !=11 and i !=12 and i !=15:
+                if self.hoverList[i] == True:
                     self.sendData()
 
     def sendData(self):
