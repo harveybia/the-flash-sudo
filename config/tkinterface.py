@@ -2,6 +2,15 @@
 # Debug Panel Interface Logic Layer #
 # copyright 2015-2016 Harvey Shi    #
 #####################################
+flash = \
+"""
+  __  .__                       _____.__                .__
+_/  |_|  |__   ____           _/ ____\  | _____    _____|  |__
+\   __\  |  \_/ __ \   ______ \   __\|  | \__  \  /  ___/  |  \\
+ |  | |   Y  \  ___/  /_____/  |  |  |  |__/ __ \_\___ \|   Y  \\
+ |__| |___|  /\___  >          |__|  |____(____  /____  >___|  /
+           \/     \/                           \/     \/     \/
+"""
 
 import Tkinter as tk
 import sys
@@ -15,6 +24,9 @@ from rpyc.utils.server import ThreadedServer
 # There are two kinds of main input sources: buttons and slides
 
 # This is the interface layer between GUI and logic
+
+# Connection Configuration
+
 
 # Global Constants:
 FILTER_ORIG   = 0 # Original Video
@@ -163,6 +175,7 @@ class InterfaceService(rpyc.Service):
             TASK_NAMES[self.taskstate]))
 
 if __name__ == "__main__":
+    print flash
     info("initiating server")
     server = ThreadedServer(InterfaceService, port = 15251)
     speaklog("ready to accept connections")

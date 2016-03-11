@@ -9,8 +9,9 @@ import random
 import os
 import time
 import rpyc
-from Tkinter import *
 import subprocess
+from Tkinter import *
+from PIL import Image, ImageTk
 
 ADDR, PORT = 'localhost', 15251
 # Video Configuration
@@ -19,7 +20,7 @@ V_WIDTH, V_HEIGHT = 320, 240
 newaddr = raw_input("Backbone server adderss, leave empty for localhost: ")
 if newaddr != "": ADDR = newaddr
 newport = raw_input("Port number, leave empty for 15251: ")
-if newport != "": ADDR = newaddr
+if newport != "": ADDR = int(newaddr)
 del newaddr, newport
 
 # For Unit Test Purposes
