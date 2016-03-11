@@ -13,6 +13,41 @@ from Tkinter import *
 import subprocess
 
 ADDR, PORT = 'localhost', 15251
+# Video Configuration
+V_WIDTH, V_HEIGHT = 320, 240
+
+newaddr = raw_input("Backbone server adderss, leave empty for localhost: ")
+if newaddr != "": ADDR = newaddr
+newport = raw_input("Port number, leave empty for 15251: ")
+if newport != "": ADDR = newaddr
+del newaddr, newport
+
+# For Unit Test Purposes
+import cv2
+
+def _grayToRGB(img):
+    # Converts grayscale image into RGB
+    # This conversion uses numpy array operation and takes less time
+    return cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+
+def _rgbToTkImage(img):
+    im = Image.fromarray(img)
+    return ImageTk.PhotoImage(im)
+
+def _grayToTkImage(img):
+    # Convert the Image object into a TkPhoto object
+    im = Image.fromarray(grayToRGB(img))
+    return ImageTk.PhotoImage(im)
+
+def startVideoStream(addr="", port=15122):
+    return cv2.VideoCapture(0)
+
+def readTkImage(stream):
+    ret, frame = stream.read()
+    if ret:
+        return _rgbToTkImage(frame)
+    else:
+        return Image(width=V_WIDTH, height=V_HEIGHT)
 
 class Application(object):
     # Override these methods when creating your own animation
@@ -99,15 +134,20 @@ class Interface(Application):
         self.valueList = [0] * 14
         self.startRun = False
 
+        # Connection to backbone server
         self.conn = rpyc.connect(ADDR, PORT)
 
+        # Connection to raw video stream
+        self.video = startVideoStream()
+        #readTkImage(self.video)
+
     def getMonitorSelectorList(self):
-        return ["ORIG", "PROC", "B/W",    "IRNV",
+        return ["ORIG", "PROC", "B/W", "IRNV",
                 "CV",   "PRED", "HYBRID", "BLUR"]
 
     def getMissionPanelList(self):
-        return ["IDLE",  "DEBUG",  "LINE TRACE", "RUN"  ,
-                "RESET", "CAMERA", "TEST",       "ABORT"]
+        return ["IDLE",  "DEBUG",  "LINE TRACE", "RUN",
+                "RESET", "CAMERA", "TEST", "ABORT"]
 
     def getVisualCtrlList(self):
         return ["BRIGHTNESS", "CONTRAST", "BLUR INDEX",
