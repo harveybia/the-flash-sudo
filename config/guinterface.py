@@ -51,6 +51,14 @@ def readTkImage(stream):
     else:
         return Image(width=V_WIDTH, height=V_HEIGHT)
 
+
+# Colors
+FrameBG = "#2B3990"
+ButtonBG = "#1C75BC"
+Slider1 = "#39B54A"
+Slider2 = "#2BB673"
+Slider3 = "#00A79D"
+
 class Application(object):
     # Override these methods when creating your own animation
     def __init__(self): pass
@@ -135,6 +143,7 @@ class Interface(Application):
         self.chosenList = [True] + [False] * 7 + [True] + [False] * 7
         self.valueList = [0] * 14
         self.startRun = False
+        status = dict()
 
         # Connection to backbone server
         self.conn = rpyc.connect(ADDR, PORT)
@@ -321,14 +330,16 @@ class Interface(Application):
     def drawVideo(self, canvas):
         canvas.create_text(30, 90, anchor=NW, text="LIVE FEED",
             font="airborne 18", fill="white")
-        canvas.create_text(230,120,anchor=N,text="FRONT",
-            font="airborne 16",fill="white")
-        canvas.create_rectangle(42,119,418,401,fill="#1C75BC",width=0)
+        # outer canvas
+        canvas.create_rectangle(42,119,418,401,fill=ButtonBG,width=0)
         # real video canvas
-        canvas.create_rectangle(70,140,390,380,fill="#1C75BC",width=2)
+        canvas.create_rectangle(70,140,390,380,fill=ButtonBG,width=2)
         # draw diagonals
         canvas.create_line(42,119,418,401,width=2)
         canvas.create_line(418,119,42,401,width=2)
+        # front view
+        canvas.create_text(230,120,anchor=N,text="FRONT",
+        font="airborne 16",fill="white")
         # put video on canvas #
         self.image = readTkImage(self.video)
         canvas.create_image(70,140,anchor=NW,image=self.image)
@@ -340,7 +351,7 @@ class Interface(Application):
         canvas.create_text(30,440, anchor=NW, text="MONITOR SELECTOR",
             font="airborne 18", fill="white")
         # draw background color for buttons
-        canvas.create_rectangle(42,470,418,530,fill="#1C75BC",width=0)
+        canvas.create_rectangle(42,470,418,530,fill=ButtonBG,width=0)
         # reverse background color if hovered on or chosenList
         for i in xrange(8):
             if self.hoverList[i] == True:
@@ -358,7 +369,7 @@ class Interface(Application):
         canvas.create_line(42,500,418,500,fill="white",width=2)
         # put button names on panel
         for i in xrange(8):
-            buttonColor1 = "white" if self.hoverList[i] == False else "#1C75BC"
+            buttonColor1 = "white" if self.hoverList[i] == False else ButtonBG
             if self.chosenList[i] == True:
                 buttonColor1 = "white"
             canvas.create_text(42+47 + (i%4)*94, 470+15 + (i/4)*30,
@@ -371,8 +382,8 @@ class Interface(Application):
         canvas.create_text(30,560, anchor=NW, text="MISSION PANEL",
             font="airborne 18", fill="white")
         # draw background color for buttons
-        canvas.create_rectangle(42,590,418,650,fill="#1C75BC",width=0)
-        canvas.create_rectangle(42+94*3,590,42+94*4,620,fill="#39B54A",width=0)
+        canvas.create_rectangle(42,590,418,650,fill=ButtonBG,width=0)
+        canvas.create_rectangle(42+94*3,590,42+94*4,620,fill=Slider1,width=0)
         canvas.create_rectangle(42+94*3,620,42+94*4,650,fill="red",width=0)
         # reverse background color if hovered on or chosen
         for block in xrange(8,16):
@@ -391,7 +402,7 @@ class Interface(Application):
         canvas.create_line(42,620,418,620,fill="white",width=2)
         # put button names on panel
         for i in xrange(8):
-            buttonColor2="white" if self.hoverList[i+8] == False else "#1C75BC"
+            buttonColor2="white" if self.hoverList[i+8] == False else ButtonBG
             if self.chosenList[i+8] == True:
                 buttonColor2 = "white"
             canvas.create_text(42+47 + (i%4)*94, 590+15 + (i/4)*30,
@@ -399,7 +410,7 @@ class Interface(Application):
                 text=self.missionList[i], font="airborne 15")
         # special color for "run" and "abort" buttons #
         if self.hoverList[11]:
-            canvas.create_text(42+47 + 3*94, 590+15, fill="#39B54A",
+            canvas.create_text(42+47 + 3*94, 590+15, fill=Slider1,
                 text=self.missionList[3], font="airborne 15")
         if self.hoverList[15]:
             canvas.create_text(42+47 + 3*94, 590+15 + 30, fill="red",
@@ -408,36 +419,121 @@ class Interface(Application):
         if self.chosenList[11]:
             if int(time.time() // 0.1) % 12 < 7:
                 canvas.create_rectangle(42+3*94,590,42+4*94,620,
-                    fill="#39B54A", width=0)
+                    fill=Slider1, width=0)
                 canvas.create_text(42+47 + 3*94, 590+15, fill="white",
                     text=self.missionList[3], font="airborne 15")
             else:
                 canvas.create_rectangle(42+3*94,590,42+4*94,620,
                     fill="white", width=0)
-                canvas.create_text(42+47 + 3*94, 590+15, fill="#39B54A",
+                canvas.create_text(42+47 + 3*94, 590+15, fill=Slider1,
                     text=self.missionList[3], font="airborne 15")
 
 
     def drawSliders(self, canvas):
-        pass
 
+        # VISUAL CONTROL PANEL #
+        canvas.create_rectangle(435,70,885,300,fill=FrameBG, width=0)
+        canvas.create_text(660, 75, anchor=N, text="VISUAL CONTROL PANEL",
+            font="airborne 18", fill="white")
+        for i in range(5):
+            canvas.create_rectangle(445,105+i*40,540,135+i*40,
+                fill=Slider1,width=0)
+            canvas.create_text(492,120+i*40,text=self.visualList[i],
+                font="airborne 15", fill="white")
+
+        # slider1 #
+            canvas.create_line(560,120+i*40,860,120+i*40,width=4,fill="white")
+            # TODO: create slider
+            # canvas.create_rectangle()
+
+
+        # TRACKING POINT SAMPLING PARAMETERS #
+        canvas.create_rectangle(435,330,885,680,fill=FrameBG, width=0)
+        canvas.create_text(660, 335, anchor=N,
+            text="TRACKING POINT SAMPLING PARAMETERS",
+            font="airborne 18", fill="white")
+        for j in range(8):
+            canvas.create_rectangle(445,365+j*40,540,395+j*40,
+                fill=Slider2,width=0)
+            canvas.create_text(492,380+j*40,text=self.parameterList[j],
+                font="airborne 15", fill="white")
+
+        # slider2 #
+            canvas.create_line(560,380+j*40,860,380+j*40,width=4,fill="white")
+
+
+        # FUNCTIONALITY CONTROL PANEL #
+        canvas.create_rectangle(910,70,1360,300,fill=FrameBG, width=0)
+        canvas.create_text(1135,75,anchor=N,text="FUNCTIONALITY CONTROL PANEL",
+            font="airborne 18", fill="white")
+        for k in range(5):
+            canvas.create_rectangle(920,105+k*40,1015,135+k*40,
+                fill=Slider3,width=0)
+            canvas.create_text(967,120+k*40,text=self.funcList[k],
+                font="airborne 15", fill="white")
+
+        # slider3 #
+            canvas.create_line(1040,120+k*40,1340,120+k*40,width=4,fill="white")
+
+
+# MISSION STATUS OVERVIEW #
     def drawInfoBar(self, canvas):
-#         self.status = {
-#             'STAT': STAT_ONLINE, 'ACTT': 0, 'MIST': 0, 'DELY': 0,
-#             'GATC': 0, 'SPED': 0, 'PROT': 0, 'CVST': STAT_ONLINE,
-#             'BATT': 100, 'ADDR': socket.gethostname()
-#         }
-        # @key:
-        # STAT: (int) status of mobot
-        # ACTT: (int) active time in seconds
-        # MIST: (int) mission time in seconds
-        # DELY: (int) internet delay in milliseconds
-        # GATC: (int) count of gates passed
-        # SPED: (int) current mobot speed
-        # PROT: (int) process time for cv
-        # CVST: (int) status of cv
-        # BATT: (int) battery percentage
-        # ADDR: (str) address of service machine (can be mobot)
+
+        # draw background #
+        canvas.create_rectangle(910,330,1360,680,fill=FrameBG, width=0)
+        canvas.create_text(1135, 343, anchor=N, text="MISSION STATUS OVERVIEW",
+            font="airborne 18", fill="white")
+        for i in range(5):
+            y0 = 380 + 60*i
+            y1 = y0 + 30
+            canvas.create_rectangle(910,y0,1360,y1,fill=ButtonBG, width=0)
+        canvas.create_line(1060,380,1060,680,fill="white",width=3)
+
+
+
+    # draw status #
+        status = self.conn.root.getStatus() #-> status dict
+        keyNames = {'STAT': "STATUS", 'ACTT': "ACTIVE TIME",
+                    'MIST': "MISSION TIME", 'DELY': "DELAY",
+                    'GATC': "GATES COUNT", 'SPED': "SPEED",
+                    'PROT': "PROC DELAY", 'CVST': "CV STATUS",
+                    'BATT': "BATT VOLT", 'ADDR': "IP ADDRESS"
+                   }
+        keyOrder = {'STAT': 0, 'ACTT': 1,
+                    'MIST': 2, 'DELY': 3,
+                    'GATC': 4, 'SPED': 5,
+                    'PROT': 6, 'CVST': 7,
+                    'BATT': 8, 'ADDR': 9
+                   }
+
+        # draw item #
+        for key in status:
+            keyName = keyNames[key]
+            i = keyOrder[key]
+            canvas.create_text(985,395+i*30,text=keyName,font="airborne 15",
+                fill="white")
+            canvas.create_text(1210,395+i*30,text=status[key],
+                font="airborne 15",fill="white")
+
+
+
+
+        # status = {
+        #     'STAT': STAT_ONLINE, 'ACTT': 0, 'MIST': 0, 'DELY': 0,
+        #     'GATC': 0, 'SPED': 0, 'PROT': 0, 'CVST': STAT_ONLINE,
+        #     'BATT': 100, 'ADDR': socket.gethostname()
+        # }
+        # @key:
+        # STAT: (int) status of mobot
+        # ACTT: (int) active time in seconds
+        # MIST: (int) mission time in seconds
+        # DELY: (int) internet delay in milliseconds
+        # GATC: (int) count of gates passed
+        # SPED: (int) current mobot speed
+        # PROT: (int) process time for cv
+        # CVST: (int) status of cv
+        # BATT: (int) battery percentage
+        # ADDR: (str) address of service machine (can be mobot)
 
     def redrawAll(self):
         canvas = self.canvas
