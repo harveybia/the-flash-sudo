@@ -139,7 +139,7 @@ class Interface(Application):
 
         # Connection to raw video stream
         self.video = startVideoStream()
-        #readTkImage(self.video)
+        # self.image = readTkImage(self.video)
 
     def getMonitorSelectorList(self):
         return ["ORIG", "PROC", "B/W", "IRNV",
@@ -268,7 +268,8 @@ class Interface(Application):
         self.conn.root.updateValues(filterDic, taskDic, slideDic)
 
     def getData(self):
-        FILTER_KEYS   = ['ORIG', 'PROC', 'BW', 'IRNV', 'CV', 'PRED', 'HYBR', 'BLUR']
+        FILTER_KEYS   = ['ORIG', 'PROC', 'BW', 'IRNV',
+            'CV', 'PRED', 'HYBR', 'BLUR']
         TASK_KEYS   = ['IDLE', 'DEBU', 'TRAC', 'CAM', 'TEST']
         SLIDE_KEYS = [
                       'BRIG', 'CNST', 'BLUR',
@@ -304,6 +305,7 @@ class Interface(Application):
         self.drawVideo(canvas)
         self.drawButtons(canvas)
         self.drawSliders(canvas)
+        self.drawInfoBar(canvas)
 
     def drawCaption(self, canvas):
         canvas.create_text(15, 15, anchor=NW, text="THE-FLASH-SUDO",
@@ -325,6 +327,9 @@ class Interface(Application):
         # draw diagonals
         canvas.create_line(42,119,418,401,width=2)
         canvas.create_line(418,119,42,401,width=2)
+        # put video on canvas #
+        self.image = readTkImage(self.video)
+        canvas.create_image(70,140,anchor=NW,image=self.image)
 
     def drawButtons(self, canvas):
         ####################
@@ -411,6 +416,9 @@ class Interface(Application):
 
 
     def drawSliders(self, canvas):
+        pass
+
+    def drawInfoBar(self, canvas):
         pass
 
     def redrawAll(self):
