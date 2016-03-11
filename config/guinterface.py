@@ -9,8 +9,9 @@ import random
 import os
 import time
 import rpyc
-from Tkinter import *
 import subprocess
+from Tkinter import *
+from PIL import Image, ImageTk
 
 ADDR, PORT = 'localhost', 15251
 # Video Configuration
