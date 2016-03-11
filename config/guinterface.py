@@ -46,7 +46,8 @@ def startVideoStream(addr="", port=15122):
 def readTkImage(stream):
     ret, frame = stream.read()
     if ret:
-        return _rgbToTkImage(frame)
+        resized = cv2.resize(frame, dsize=(V_WIDTH, V_HEIGHT))
+        return _rgbToTkImage(resized)
     else:
         return Image(width=V_WIDTH, height=V_HEIGHT)
 
@@ -363,6 +364,7 @@ class Interface(Application):
             canvas.create_text(42+47 + (i%4)*94, 470+15 + (i/4)*30,
                 fill=buttonColor1,
                 text=self.monitorList[i],font="airborne 15")
+
         #################
         # MISSION PANEL #
         #################
@@ -420,7 +422,22 @@ class Interface(Application):
         pass
 
     def drawInfoBar(self, canvas):
-        pass
+        self.status = {
+            'STAT': STAT_ONLINE, 'ACTT': 0, 'MIST': 0, 'DELY': 0,
+            'GATC': 0, 'SPED': 0, 'PROT': 0, 'CVST': STAT_ONLINE,
+            'BATT': 100, 'ADDR': socket.gethostname()
+        }
+        # @key:
+        # STAT: (int) status of mobot
+        # ACTT: (int) active time in seconds
+        # MIST: (int) mission time in seconds
+        # DELY: (int) internet delay in milliseconds
+        # GATC: (int) count of gates passed
+        # SPED: (int) current mobot speed
+        # PROT: (int) process time for cv
+        # CVST: (int) status of cv
+        # BATT: (int) battery percentage
+        # ADDR: (str) address of service machine (can be mobot)
 
     def redrawAll(self):
         canvas = self.canvas
