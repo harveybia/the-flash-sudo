@@ -422,11 +422,11 @@ class Interface(Application):
         pass
 
     def drawInfoBar(self, canvas):
-        self.status = {
-            'STAT': STAT_ONLINE, 'ACTT': 0, 'MIST': 0, 'DELY': 0,
-            'GATC': 0, 'SPED': 0, 'PROT': 0, 'CVST': STAT_ONLINE,
-            'BATT': 100, 'ADDR': socket.gethostname()
-        }
+#         self.status = {
+#             'STAT': STAT_ONLINE, 'ACTT': 0, 'MIST': 0, 'DELY': 0,
+#             'GATC': 0, 'SPED': 0, 'PROT': 0, 'CVST': STAT_ONLINE,
+#             'BATT': 100, 'ADDR': socket.gethostname()
+#         }
         # @key:
         # STAT: (int) status of mobot
         # ACTT: (int) active time in seconds
