@@ -19,7 +19,7 @@ V_WIDTH, V_HEIGHT = 320, 240
 newaddr = raw_input("Backbone server adderss, leave empty for localhost: ")
 if newaddr != "": ADDR = newaddr
 newport = raw_input("Port number, leave empty for 15251: ")
-if newport != "": ADDR = newaddr
+if newport != "": ADDR = int(newaddr)
 del newaddr, newport
 
 # For Unit Test Purposes
