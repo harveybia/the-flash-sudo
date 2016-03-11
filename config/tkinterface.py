@@ -7,6 +7,7 @@ import Tkinter as tk
 import sys
 import time
 import rpyc
+import socket
 from utils import speak, speaklog, info
 from rpyc.utils.server import ThreadedServer
 
@@ -25,6 +26,8 @@ FILTER_PRED   = 5 # Predictive Mode
 FILTER_HYBRID = 6 # Hybrid Mode: ORIG + TRAC PT + PRED + CV
 
 FILTER_KEYS   = ['ORIG', 'PROC', 'BW', 'IRNV', 'CV', 'PRED', 'HYBR', 'BLUR']
+FILTER_NAMES  = ['original', 'processed', 'black and white', 'inverted',
+    'computer vision', 'predictive', 'hybrid', 'blurred']
 
 TASK_IDLE     = 0 # IDLE State
 TASK_DEBUG    = 1 # Debug Mode
@@ -33,6 +36,7 @@ TASK_CAMERA   = 3 # Capture Camera Feed
 TASK_TEST     = 4 # Test Trial
 
 TASK_KEYS   = ['IDLE', 'DEBU', 'TRAC', 'CAM', 'TEST']
+TASK_NAMES  = ['idle', 'debug', 'line trace', 'camera', 'test']
 
 # Constants for Value slide controls:
 SLIDE_KEYS = [
@@ -40,6 +44,11 @@ SLIDE_KEYS = [
     'THRS', 'SIZE', 'CERT', 'PTS', 'RADI', 'A', 'B', 'C',
     'TCHS', 'GATG', 'MAXS'
     ]
+
+STAT_ONLINE = 22
+STAT_DISCONNECTED = 23
+STAT_MISSION = 24
+STAT_ABORT = 25
 
 speaklog("system initializing", block=True)
 
@@ -77,26 +86,51 @@ class InterfaceService(rpyc.Service):
         # GATG: (int) [1,20] gate target count
         # MAXS: (int) [0,255] maximum speed
 
+        self.status = {
+            'STAT': STAT_ONLINE, 'ACTT': 0, 'MIST': 0, 'DELY': 0,
+            'GATC': 0, 'SPED': 0, 'PROT': 0, 'CVST': STAT_ONLINE,
+            'BATT': 100, 'ADDR': socket.gethostname()
+        }
+        # @key:
+        # STAT: (int) status of mobot
+        # ACTT: (int) active time in seconds
+        # MIST: (int) mission time in seconds
+        # DELY: (int) internet delay in milliseconds
+        # GATC: (int) count of gates passed
+        # SPED: (int) current mobot speed
+        # PROT: (int) process time for cv
+        # CVST: (int) status of cv
+        # BATT: (int) battery percentage
+        # ADDR: (str) address of service machine (can be mobot)
+
     def on_connect(self):
         speaklog("connection established")
+        self.status['STAT'] = STAT_ONLINE
 
     def on_disconnect(self):
         speaklog("connection lost")
+        self.status['STAT'] = STAT_DISCONNECTED
+
+    def exposed_getStatus(self):
+        return self.status
 
     def exposed_resetStatus(self):
         speaklog('status reset')
+        self.status['STAT'] = STAT_ONLINE
         # TODO: do something to reset status
 
     def exposed_abortMission(self):
         if self.taskrunning:
             self.taskrunning = False
             speaklog('mission aborted')
+            self.status['STAT'] = STAT_ABORT
             # TODO: do something to abort mission
 
     def exposed_startMission(self):
         if not self.taskrunning:
             self.taskrunning = True
             speaklog('mission is a go')
+            self.status['STAT'] = STAT_MISSION
             # TODO: do something to trigger mission
 
     def exposed_updateValues(self, filterstates, taskstates, slides):
@@ -125,7 +159,8 @@ class InterfaceService(rpyc.Service):
         for key in slides:
             self.values[key] = slides[key]
 
-        speaklog("values updated")
+        speaklog("%s, %s"%(FILTER_NAMES[self.filterstate],
+            TASK_NAMES[self.taskstate]))
 
 if __name__ == "__main__":
     info("initiating server")

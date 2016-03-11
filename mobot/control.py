@@ -81,7 +81,7 @@ class Controller:
         # getEncoderValues() -> tuple (x, y)
         return (self.encL, self.encR)
 
-def mainloop(touchcallback=None):
+def touchUnitTest(touchcallback=None):
     touchcount = 0
     encL = 0
     encR = 0
@@ -105,7 +105,7 @@ def mainloop(touchcallback=None):
 if __name__ == "__main__":
     # Unit Test
     """
-    def mainloop(c):
+    def touchUnitTest(c):
         while 1:
             c.update()
     """
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     """
     con = Controller()
     con.setTouchCallback(isTouched)
-    thd = threading.Thread(target=mainloop, args=(con,))
+    thd = threading.Thread(target=touchUnitTest, args=(con,))
     thd.daemon = True
     thd.start()
 
