@@ -190,7 +190,7 @@ class MobotService(rpyc.Service):
             # Read touch sensor values
             if BrickPi.Sensor[S2]:
                 # Prevent signal disturbances
-                threshold = int(28 - self.status['TCHS'] * 20)
+                threshold = int(28 - self.values['TCHS'] * 20)
                 self.touchcount += 2
                 if self.touchcount > threshold:
                     # Increment gates count
@@ -205,6 +205,7 @@ class MobotService(rpyc.Service):
         while not stop_event.is_set():
             self.update()
             # Refresh period
+            print "updated"
             stop_event.wait(0.05)
 
 if __name__ == "__main__":
