@@ -6,7 +6,7 @@ import socket
 import picamera
 import threading
 from BrickPi import *
-from rpyc import ThreadedServer
+from rpyc.utils.server import ThreadedServer
 from utils import init, info, warn
 
 # Reference: BrickPi_Python/Sensor_Examples/*.py
