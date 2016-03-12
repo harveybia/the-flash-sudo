@@ -109,7 +109,7 @@ def startVideoStream_H264(port, stop_event):
         CAMERA.stop_recording()
     finally:
         connection.close()
-        client_socket.close()
+        server_socket.close()
 
 class MobotService(rpyc.Service):
     def __init__(self, *args, **kwargs):
@@ -151,6 +151,7 @@ class MobotService(rpyc.Service):
     def on_disconnect(self):
         warn("connection lost")
         self.loopstop.set()
+        self.exposed_stopVideoStream
 
     def exposed_recognized(self):
         return True

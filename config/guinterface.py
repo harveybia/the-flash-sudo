@@ -157,7 +157,7 @@ class Application(object):
             self.canvas.after(self.timerFiredDelay, timerFiredWrapper)
 
         # init and get timerFired running
-        self.__init__()
+        #self.__init__()
         timerFiredWrapper()
         # and launch the app
         root.mainloop()
