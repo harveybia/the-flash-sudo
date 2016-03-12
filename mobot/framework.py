@@ -44,6 +44,40 @@ FRAMERATE = 24
 # Service configuration
 MOBOT_PORT = 15112
 
+# Global Constants:
+FILTER_ORIG   = 0 # Original Video
+FILTER_PROC   = 1 # Processed Image (Canny Edges)
+FILTER_BW     = 2 # Black & White View
+FILTER_IRNV   = 3 # Inverted Image
+FILTER_CV     = 4 # Computer Vision Mode, With TRAC PT, BEZIER CURVE
+FILTER_PRED   = 5 # Predictive Mode
+FILTER_HYBRID = 6 # Hybrid Mode: ORIG + TRAC PT + PRED + CV
+
+FILTER_KEYS   = ['ORIG', 'PROC', 'BW', 'IRNV', 'CV', 'PRED', 'HYBR', 'BLUR']
+FILTER_NAMES  = ['original', 'processed', 'black and white', 'inverted',
+    'computer vision', 'predictive', 'hybrid', 'blurred']
+
+TASK_IDLE     = 0 # IDLE State
+TASK_DEBUG    = 1 # Debug Mode
+TASK_TRACE    = 2 # Line Trace
+TASK_CAMERA   = 3 # Capture Camera Feed
+TASK_TEST     = 4 # Test Trial
+
+TASK_KEYS   = ['IDLE', 'DEBU', 'TRAC', 'CAM', 'TEST']
+TASK_NAMES  = ['idle', 'debug', 'line trace', 'camera', 'test']
+
+# Constants for Value slide controls:
+SLIDE_KEYS = [
+    'BRIG', 'CNST', 'BLUR',
+    'THRS', 'SIZE', 'CERT', 'PTS', 'RADI', 'A', 'B', 'C',
+    'TCHS', 'GATG', 'MAXS'
+    ]
+
+STAT_ONLINE = 22
+STAT_DISCONNECTED = 23
+STAT_MISSION = 24
+STAT_ABORT = 25
+
 def debugConnection(sock, addr, port):
     # Prints the details of a connection
     warn("connection timed out, plesae check listener status")
