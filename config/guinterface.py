@@ -45,11 +45,11 @@ def _grayToTkImage(img):
     return ImageTk.PhotoImage(im)
 
 def startVideoStream(addr=MOBOT_ADDR, port=VIDEO_PORT):
-    #return cv2.VideoCapture(0)
-    client_socket = socket.socket()
-    client_socket.connect((addr, port))
-    stream = client_socket.makefile('rb')
-    return stream
+    return cv2.VideoCapture(0)
+    #client_socket = socket.socket()
+    #client_socket.connect((addr, port))
+    #stream = client_socket.makefile('rb')
+    #return stream
 
 def readTkImage(stream):
     ret, frame = stream.read()
