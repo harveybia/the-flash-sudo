@@ -47,7 +47,7 @@ def readTkImage(stream):
     ret, frame = stream.read()
     if ret:
         resized = cv2.resize(frame, dsize=(V_WIDTH, V_HEIGHT))
-        return _rgbToTkImage(resized)
+        return _rgbToTkImage(cv2.cvtColor(resized, cv2.COLOR_BGR2RGB))
     else:
         return Image(width=V_WIDTH, height=V_HEIGHT)
 
@@ -87,6 +87,7 @@ ButtonBG = "#1C75BC"
 Slider1 = "#39B54A"
 Slider2 = "#2BB673"
 Slider3 = "#00A79D"
+EmptyGray = "gray30"
 
 class Application(object):
     # Override these methods when creating your own animation
@@ -170,6 +171,7 @@ class Interface(Application):
         self.funcList = self.getFunctionalityList()
         self.hoverList = [False] * 16
         self.chosenList = [True] + [False] * 7 + [True] + [False] * 7
+        self.sliderList = [False] * 14
         self.valueList = [0] * 14
         self.startRun = False
         self.unitAdded = False
@@ -230,12 +232,12 @@ class Interface(Application):
             self.chosenList[11] = True
             self.startRun = True
         # pressing other buttons #
-        elif x0<=x<=x1 and y0<=y<=y1:
+        elif x0<=x<x1 and y0<=y<y1:
             for i in xrange(8):
                 if self.hoverList[i] == True:
                     self.chosenList[i] = True
                 else: self.chosenList[i] = False
-        elif x0<=x<=x1 and y2<=y<=y3:
+        elif x0<=x<x1 and y2<=y<y3:
             for j in xrange(8, 16):
                 if self.hoverList[j] == True:
                     self.chosenList[j] = True
@@ -244,9 +246,44 @@ class Interface(Application):
                     self.startRun = False
                 else: self.chosenList[j] = False
 
+        ###########
+        # sliders #
+        ###########
+        dW = 10/2
+        dH = 22/2
+        for i in range(3):
+            x0 = 560 + self.valueList[i]*3 - dW
+            x1 = 560 + self.valueList[i]*3 + dW
+            y0 = 120 + i*40 - dH
+            y1 = 120 + i*40 + dH
+            if x0<=x<=x1 and y0<=y<=y1:
+                self.sliderList[i] = True
+            else: self.sliderList[i] = False
+
+        for j in range(8):
+            x0 = 560 + self.valueList[j+3]*3 - dW
+            x1 = 560 + self.valueList[j+3]*3 + dW
+            y0 = 380 + j*40 - dH
+            y1 = 380 + j*40 + dH
+            if x0<=x<=x1 and y0<=y<=y1:
+                self.sliderList[j+3] = True
+            else: self.sliderList[j+3] = False
+
+        for k in range(3):
+            x0 = 1040 + self.valueList[k+11]*3 - dW
+            x1 = 1040 + self.valueList[k+11]*3 + dW
+            y0 = 120 + k*40 - dH
+            y1 = 120 + k*40 + dH
+            if x0<=x<=x1 and y0<=y<=y1:
+                self.sliderList[k+11] = True
+            else: self.sliderList[k+11] = False
+
+
+
     def mouseMotion(self, event):
         x = event.x
         y = event.y
+
         # MONITOR #
         for i in xrange(8):
             x0 = 42+94*(i%4)
@@ -256,6 +293,7 @@ class Interface(Application):
             if x0<=x<x1 and y0<=y<y1:
                 self.hoverList[i] = True
             else: self.hoverList[i] = False
+
         # MISSION #
         for i in xrange(8):
             x0 = 42+94*(i%4)
@@ -265,6 +303,49 @@ class Interface(Application):
             if x0<=x<x1 and y0<=y<y1:
                 self.hoverList[i+8] = True
             else: self.hoverList[i+8] = False
+
+        # SLIDERS #
+        for i in range(3):
+            if self.sliderList[i]:
+                if x >= 860:
+                    newValue = 100
+                    self.sliderList[i] = False
+                elif x <= 560:
+                    newValue = 0
+                    if x <= 540:
+                        self.sliderList[i] = False
+                else: newValue = (x-560)/3
+                self.valueList[i] = newValue
+
+        for j in range(3,11):
+            if self.sliderList[j]:
+                if x >= 860:
+                    newValue = 100
+                    self.sliderList[j] = False
+                elif x <= 560:
+                    newValue = 0
+                    if x <= 540:
+                        self.sliderList[j] = False
+                else: newValue = (x-560)/3
+                self.valueList[j] = newValue
+
+
+        for k in range(11,14):
+            if self.sliderList[k]:
+                if x >= 1340:
+                    newValue = 100
+                    self.sliderList[k] = False
+                elif x <= 1040:
+                    newValue = 0
+                    if x <= 1020:
+                        self.sliderList[k] = False
+                else: newValue = (x-1040)/3
+                self.valueList[k] = newValue
+
+
+
+
+
 
     def mouseReleased(self, event):
         x = event.x
@@ -302,6 +383,38 @@ class Interface(Application):
             for i in xrange(8, 16):
                 if self.hoverList[i] == True:
                     self.sendData()
+
+
+        ###########
+        # sliders #
+        ###########
+        dW = 10/2
+        dH = 22/2
+        for i in range(3):
+            x0 = 560 + self.valueList[i]*3 - dW
+            x1 = 560 + self.valueList[i]*3 + dW
+            y0 = 120 + i*40 - dH
+            y1 = 120 + i*40 + dH
+            if x0<=x<=x1 and y0<=y<=y1:
+                self.sliderList[i] = False
+
+        for i in range(8):
+            x0 = 560 + self.valueList[i+3]*3 - dW
+            x1 = 560 + self.valueList[i+3]*3 + dW
+            y0 = 380 + i*40 - dH
+            y1 = 380 + i*40 + dH
+            if x0<=x<=x1 and y0<=y<=y1:
+                self.sliderList[i+3] = False
+
+        for i in range(3):
+            x0 = 1040 + self.valueList[i+11]*3 - dW
+            x1 = 1040 + self.valueList[i+11]*3 + dW
+            y0 = 120 + i*40 - dH
+            y1 = 120 + i*40 + dH
+            if x0<=x<=x1 and y0<=y<=y1:
+                self.sliderList[i+11] = False
+
+
 
     def sendData(self):
         filterDic, taskDic, slideDic = self.getData()
@@ -460,21 +573,46 @@ class Interface(Application):
 
 
     def drawSliders(self, canvas):
+        slider_H = 22
+        slider_W = 10
+        # to make drawing more convinient #
+        dH = slider_H/2
+        dW = slider_W/2
 
         # VISUAL CONTROL PANEL #
         canvas.create_rectangle(435,70,885,300,fill=FrameBG, width=0)
         canvas.create_text(660, 75, anchor=N, text="VISUAL CONTROL PANEL",
             font="airborne 18", fill="white")
-        for i in range(5):
+        for i in range(3):
             canvas.create_rectangle(445,105+i*40,540,135+i*40,
                 fill=Slider1,width=0)
             canvas.create_text(492,120+i*40,text=self.visualList[i],
                 font="airborne 15", fill="white")
 
         # slider1 #
+            # centerline #
             canvas.create_line(560,120+i*40,860,120+i*40,width=4,fill="white")
-            # TODO: create slider
-            # canvas.create_rectangle()
+
+            # highlight line #
+            x = 560 + self.valueList[i]*3
+            xEnd = x-dW
+            canvas.create_line(560,120+i*40,xEnd,120+i*40,width=4,fill=Slider1)
+
+            # slide bar
+            y = 120 + i*40
+            canvas.create_rectangle(x-dW,y-dH,x+dW,y+dH,fill="white",width=0)
+
+        # empty slider #
+        for i in range(3,5):
+            canvas.create_rectangle(445,105+i*40,540,135+i*40,
+                fill=Slider1,width=0)
+            canvas.create_text(492,120+i*40,text=self.visualList[i],
+                font="airborne 15", fill="white")
+            y = 120 + i*40
+            canvas.create_line(560,120+i*40,860,120+i*40,width=4,fill="white")
+            canvas.create_line(560,120+i*40,710,120+i*40,width=4,fill=EmptyGray)
+            canvas.create_rectangle(710-dW,y-dH,710+dW,y+dH,
+                fill="white",width=0)
 
 
         # TRACKING POINT SAMPLING PARAMETERS #
@@ -489,21 +627,76 @@ class Interface(Application):
                 font="airborne 15", fill="white")
 
         # slider2 #
+
+            # centerline #
             canvas.create_line(560,380+j*40,860,380+j*40,width=4,fill="white")
+
+            # highlight line #
+            x = 560 + self.valueList[j+3]*3
+            xEnd = x-dW
+            canvas.create_line(560,380+j*40,xEnd,380+j*40,width=4,fill=Slider2)
+
+            # slide bar
+            y = 380 + j*40
+            canvas.create_rectangle(x-dW,y-dH,x+dW,y+dH,fill="white",width=0)
+
+
+
 
 
         # FUNCTIONALITY CONTROL PANEL #
         canvas.create_rectangle(910,70,1360,300,fill=FrameBG, width=0)
         canvas.create_text(1135,75,anchor=N,text="FUNCTIONALITY CONTROL PANEL",
             font="airborne 18", fill="white")
-        for k in range(5):
+        for k in range(3):
             canvas.create_rectangle(920,105+k*40,1015,135+k*40,
                 fill=Slider3,width=0)
             canvas.create_text(967,120+k*40,text=self.funcList[k],
                 font="airborne 15", fill="white")
 
         # slider3 #
+            # centerline #
             canvas.create_line(1040,120+k*40,1340,120+k*40,width=4,fill="white")
+
+            # highlight line #
+            x = 1040 + self.valueList[k+11]*3
+            xEnd = x-dW
+            canvas.create_line(1040,120+k*40,xEnd,120+k*40,width=4,fill=Slider3)
+
+            # slide bar
+            y = 120 + k*40
+            canvas.create_rectangle(x-dW,y-dH,x+dW,y+dH,fill="white",width=0)
+
+        # battery percentage #
+        for k in range(3,4):
+            canvas.create_rectangle(920,105+k*40,1015,135+k*40,
+                fill=Slider3,width=0)
+            canvas.create_text(967,120+k*40,text=self.funcList[k],
+                font="airborne 15", fill="white")
+
+            # centerline #
+            canvas.create_line(1040,120+k*40,1340,120+k*40,width=4,fill="white")
+
+            # highlight line #
+            status = self.conn.root.getStatus() #-> status dict
+            for key in status:
+                if key == "BATT":
+                    xEnd = int(status[key])*3 + 1040
+            canvas.create_line(1040,120+k*40,xEnd,120+k*40,width=4,fill=Slider3)
+
+        # empty slider #
+        for k in range(4,5):
+            canvas.create_rectangle(920,105+k*40,1015,135+k*40,
+                fill=Slider3,width=0)
+            canvas.create_text(967,120+k*40,text=self.funcList[k],
+                font="airborne 15", fill="white")
+            y = 120 + k*40
+            canvas.create_line(1040,120+k*40,1340,120+k*40,width=4,fill="white")
+            canvas.create_line(1040,120+k*40,1190,120+k*40,width=4,
+                fill=EmptyGray)
+            canvas.create_rectangle(1190-dW,y-dH,1190+dW,y+dH,
+                fill="white",width=0)
+
 
 
 # MISSION STATUS OVERVIEW #
@@ -580,9 +773,6 @@ class Interface(Application):
     def redrawAll(self):
         canvas = self.canvas
         self.drawBasic(canvas)
-
-
-
 
 
 
