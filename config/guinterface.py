@@ -51,6 +51,35 @@ def readTkImage(stream):
     else:
         return Image(width=V_WIDTH, height=V_HEIGHT)
 
+# turn int value to str #
+def interpretKeyValue(statusDic):
+    for key in statusDic:
+        if statusDic[key] == 22:
+            statusDic[key] = "ONLINE"
+        elif statusDic[key] == 23:
+            statusDic[key] = "DISCONNECTED"
+        elif statusDic[key] == 24:
+            statusDic[key] = "IN MISSION"
+        elif statusDic[key] == 25:
+            statusDic[key] = "ABORT"
+    return statusDic
+
+def addUnit(statusDic):
+    for key in statusDic:
+        if key == "ACTT" or key == "MIST" or key == "PROT":
+            if statusDic[key] == 0:
+                statusDic[key] = str(statusDic[key]) + " SECOND"
+            else: statusDic[key] = str(statusDic[key]) + " SECONDS"
+        elif key == "DELY":
+            statusDic[key] = str(statusDic[key]) + " MS"
+        elif key == "SPED":
+            statusDic[key] = str(statusDic[key]) + " MS^-1"
+        elif key == "GATC":
+            if statusDic[key] == 0:
+                statusDic[key] = str(statusDic[key]) + " GATE PASSED"
+            else: statusDic[key] = str(statusDic[key]) + " GATES PASSED"
+    return statusDic
+
 
 # Colors
 FrameBG = "#2B3990"
@@ -143,6 +172,7 @@ class Interface(Application):
         self.chosenList = [True] + [False] * 7 + [True] + [False] * 7
         self.valueList = [0] * 14
         self.startRun = False
+        self.unitAdded = False
         status = dict()
 
         # Connection to backbone server
@@ -493,6 +523,13 @@ class Interface(Application):
 
     # draw status #
         status = self.conn.root.getStatus() #-> status dict
+
+        statusDic = interpretKeyValue(status)
+        if not self.unitAdded:
+            statusDic = addUnit(statusDic)
+            self.unitAdded = True
+
+
         keyNames = {'STAT': "STATUS", 'ACTT': "ACTIVE TIME",
                     'MIST': "MISSION TIME", 'DELY': "DELAY",
                     'GATC': "GATES COUNT", 'SPED': "SPEED",
@@ -506,13 +543,14 @@ class Interface(Application):
                     'BATT': 8, 'ADDR': 9
                    }
 
+
         # draw item #
-        for key in status:
+        for key in statusDic:
             keyName = keyNames[key]
             i = keyOrder[key]
             canvas.create_text(985,395+i*30,text=keyName,font="airborne 15",
                 fill="white")
-            canvas.create_text(1210,395+i*30,text=status[key],
+            canvas.create_text(1210,395+i*30,text=statusDic[key],
                 font="airborne 15",fill="white")
 
 
@@ -534,6 +572,10 @@ class Interface(Application):
         # CVST: (int) status of cv
         # BATT: (int) battery percentage
         # ADDR: (str) address of service machine (can be mobot)
+
+
+
+
 
     def redrawAll(self):
         canvas = self.canvas
