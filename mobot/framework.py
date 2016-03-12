@@ -205,7 +205,6 @@ class MobotService(rpyc.Service):
         while not stop_event.is_set():
             self.update()
             # Refresh period
-            print "updated"
             stop_event.wait(0.05)
 
 if __name__ == "__main__":
