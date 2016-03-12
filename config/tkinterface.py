@@ -26,7 +26,13 @@ from rpyc.utils.server import ThreadedServer
 # This is the interface layer between GUI and logic
 
 # Connection Configuration
-
+# This is the address and port number of raspberry pi control server
+MOBOT_ADDR = ""
+MOBOT_PORT = 15112
+BACKBONE_PORT = 15251
+# Port Convention:
+# MOBOT_PORT = 15112
+# BACKBONE_PORT = 15251
 
 # Global Constants:
 FILTER_ORIG   = 0 # Original Video
@@ -94,7 +100,7 @@ class InterfaceService(rpyc.Service):
         # B   : (float) [0,1] possibility of beta region
         # C   : (float) [0,1] possibility of gamma region
         # -----------------------------
-        # TCHS: (int) [0.1,0.9] touch sensitivity
+        # TCHS: (float) [0.1,0.9] touch sensitivity
         # GATG: (int) [1,20] gate target count
         # MAXS: (int) [0,255] maximum speed
 
@@ -115,6 +121,9 @@ class InterfaceService(rpyc.Service):
         # BATT: (int) battery percentage
         # ADDR: (str) address of service machine (can be mobot)
 
+        # Connection instance
+        self.conn = None
+
     def on_connect(self):
         speaklog("connection established")
         self.status['STAT'] = STAT_ONLINE
@@ -123,7 +132,32 @@ class InterfaceService(rpyc.Service):
         speaklog("connection lost")
         self.status['STAT'] = STAT_DISCONNECTED
 
+    def exposed_connectToMobot(self, addr=MOBOT_ADDR, port=MOBOT_PORT):
+        try:
+            self.conn = rpyc.connect(addr, port)
+            if self.conn.root.recognized():
+                speaklog("connected to mobot")
+                return 0
+            else:
+                speaklog("connection refused")
+                return 2
+        except:
+            speaklog("service unavailable")
+            return 1
+
+    def exposed_disconnectFromMobot(self):
+        # TODO: reset self.conn
+        pass
+
+    def _updateStatus(self):
+        # Poll status value from mobot
+        if not self.conn: return
+        status = self.conn.root.getMobotStatus()
+        for key in self.status:
+            self.status[key] = status[key]
+
     def exposed_getStatus(self):
+        self._updateStatus()
         return self.status
 
     def exposed_resetStatus(self):
@@ -177,6 +211,6 @@ class InterfaceService(rpyc.Service):
 if __name__ == "__main__":
     print flash
     info("initiating server")
-    server = ThreadedServer(InterfaceService, port = 15251)
+    server = ThreadedServer(InterfaceService, port = BACKBONE_PORT)
     speaklog("ready to accept connections")
     server.start()
