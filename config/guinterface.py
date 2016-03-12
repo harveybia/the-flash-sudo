@@ -9,10 +9,14 @@ import random
 import os
 import time
 import rpyc
+import socket
 import subprocess
 from Tkinter import *
 from PIL import Image, ImageTk
 
+MOBOT_ADDR = "128.237.184.169"
+MOBOT_PORT = 15112
+VIDEO_PORT = 20000
 ADDR, PORT = 'localhost', 15251
 # Video Configuration
 V_WIDTH, V_HEIGHT = 320, 240
@@ -40,8 +44,12 @@ def _grayToTkImage(img):
     im = Image.fromarray(grayToRGB(img))
     return ImageTk.PhotoImage(im)
 
-def startVideoStream(addr="", port=15122):
-    return cv2.VideoCapture(0)
+def startVideoStream(addr=MOBOT_ADDR, port=VIDEO_PORT):
+    #return cv2.VideoCapture(0)
+    client_socket = socket.socket()
+    client_socket.connect((addr, port))
+    stream = client_socket.makefile('rb')
+    return stream
 
 def readTkImage(stream):
     ret, frame = stream.read()
@@ -181,6 +189,8 @@ class Interface(Application):
         self.conn = rpyc.connect(ADDR, PORT)
 
         # Connection to raw video stream
+        self.conn.root.startStream(MOBOT_ADDR, MOBOT_PORT)
+        time.sleep(0.5)
         self.video = startVideoStream()
         # self.image = readTkImage(self.video)
 

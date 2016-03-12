@@ -6,8 +6,8 @@ flash = \
 """
   __  .__                       _____.__                .__
 _/  |_|  |__   ____           _/ ____\  | _____    _____|  |__
-\   __\  |  \_/ __ \   ______ \   __\|  | \__  \  /  ___/  |  \
- |  | |   Y  \  ___/  /_____/  |  |  |  |__/ __ \_\___ \|   Y  \
+\   __\  |  \_/ __ \   ______ \   __\|  | \__  \  /  ___/  |  \\
+ |  | |   Y  \  ___/  /_____/  |  |  |  |__/ __ \_\___ \|   Y  \\
  |__| |___|  /\___  >          |__|  |____(____  /____  >___|  /
            \/     \/                           \/     \/     \/
 """
@@ -27,9 +27,10 @@ from rpyc.utils.server import ThreadedServer
 
 # Connection Configuration
 # This is the address and port number of raspberry pi control server
-MOBOT_ADDR = ""
+MOBOT_ADDR = "128.237.184.169"
 MOBOT_PORT = 15112
 BACKBONE_PORT = 15251
+VIDEO_PORT = 20000
 # Port Convention:
 # MOBOT_PORT = 15112
 # BACKBONE_PORT = 15251
@@ -148,6 +149,12 @@ class InterfaceService(rpyc.Service):
     def exposed_disconnectFromMobot(self):
         # TODO: reset self.conn
         pass
+
+    def exposed_startStream(self, addr, port):
+        if self.conn == None:
+            if self.exposed_connectToMobot(addr, port) != 0:
+                return
+        self.conn.root.startVideoStream(VIDEO_PORT)
 
     def _updateStatus(self):
         # Poll status value from mobot
