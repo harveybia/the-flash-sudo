@@ -136,14 +136,18 @@ class MobotService(rpyc.Service):
 
         self.touchcount = 0
 
-        self.loopthd = threading.Thread(target=self.mainloop)
+        self.loopstop = threading.Event()
+        self.loopthd = threading.Thread(target=self.mainloop,
+            args=(self.loopstop,))
         self.loopthd.daemon = True
 
     def on_connect(self):
         info("received connection")
+        self.loopthd.start()
 
     def on_disconnect(self):
         warn("connection lost")
+        self.loopstop.set()
 
     def exposed_getMobotStatus(self):
         self._updateStatus()
@@ -197,11 +201,11 @@ class MobotService(rpyc.Service):
             self.encL = BrickPi.Encoder[L]
             self.encR = BrickPi.Encoder[R]
 
-    def mainloop(self):
-        while 1:
+    def mainloop(self, stop_event):
+        while not stop_event.is_set():
             self.update()
             # Refresh period
-            time.sleep(0.05)
+            stop_event.wait(0.05)
 
 if __name__ == "__main__":
     init("initiating mobot server")
