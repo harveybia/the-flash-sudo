@@ -396,6 +396,7 @@ class Interface(Application):
             y0 = 120 + i*40 - dH
             y1 = 120 + i*40 + dH
             if x0<=x<=x1 and y0<=y<=y1:
+                self.sendData()
                 self.sliderList[i] = False
 
         for i in range(8):
@@ -404,6 +405,7 @@ class Interface(Application):
             y0 = 380 + i*40 - dH
             y1 = 380 + i*40 + dH
             if x0<=x<=x1 and y0<=y<=y1:
+                self.sendData()
                 self.sliderList[i+3] = False
 
         for i in range(3):
@@ -412,6 +414,7 @@ class Interface(Application):
             y0 = 120 + i*40 - dH
             y1 = 120 + i*40 + dH
             if x0<=x<=x1 and y0<=y<=y1:
+                self.sendData()
                 self.sliderList[i+11] = False
 
 
