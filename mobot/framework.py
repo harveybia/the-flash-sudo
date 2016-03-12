@@ -88,10 +88,10 @@ def debugConnection(sock, addr, port):
     print term.render("${RED}connection timed out after %.3f seconds \
         ${NORMAL}" %sock.gettimeout())
 
-def startVideoStream_H264(addr, port):
+def startVideoStream_H264(port, stop_event):
     info("setting up streaming socket")
     server_socket = socket.socket()
-    server_socket.bind((addr, port))
+    server_socket.bind(('0.0.0.0', port))
     server_socket.listen(0)
 
     # Make a file-like object out of the connection
@@ -104,7 +104,7 @@ def startVideoStream_H264(addr, port):
     info("connected to %s for video feed"%(str(server_socket.getpeername())))
     try:
         CAMERA.start_recording(connection, format='h264')
-        while not VIDEO_TERMINATE:
+        while not stop_event.is_set():
             pass
         CAMERA.stop_recording()
     finally:
@@ -141,6 +141,9 @@ class MobotService(rpyc.Service):
             args=(self.loopstop,))
         self.loopthd.daemon = True
 
+        self.videostop = threading.Event()
+        self.videothd = None
+
     def on_connect(self):
         info("received connection")
         self.loopthd.start()
@@ -148,6 +151,9 @@ class MobotService(rpyc.Service):
     def on_disconnect(self):
         warn("connection lost")
         self.loopstop.set()
+
+    def exposed_recognized(self):
+        return True
 
     def exposed_getMobotStatus(self):
         self._updateStatus()
@@ -162,9 +168,20 @@ class MobotService(rpyc.Service):
         except:
             warn("invalid options in configureSettings()")
 
-    def exposed_startVideoStream(self, addr, port):
+    def exposed_startVideoStream(self, port):
         # Establishs a TCP connection with interface for video streaming
-        startVideoStream_H264(addr, port)
+        if self.videothd != None:
+            warn("video streaming already running")
+            return
+        self.videothd = threading.Thread(target=startVideoStream_H264,
+            args=(port, self.videostop))
+        self.videothd.daemon = True
+        info("starting video stream")
+        self.videothd.start()
+
+    def exposed_stopVideoStream(self):
+        info("stopping video stream")
+        self.videostop.set()
 
     def _updateStatus(self):
         # Polls device information and updates status dict

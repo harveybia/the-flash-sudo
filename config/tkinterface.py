@@ -30,6 +30,7 @@ from rpyc.utils.server import ThreadedServer
 MOBOT_ADDR = ""
 MOBOT_PORT = 15112
 BACKBONE_PORT = 15251
+VIDEO_PORT = 20000
 # Port Convention:
 # MOBOT_PORT = 15112
 # BACKBONE_PORT = 15251
@@ -148,6 +149,12 @@ class InterfaceService(rpyc.Service):
     def exposed_disconnectFromMobot(self):
         # TODO: reset self.conn
         pass
+
+    def exposed_startStream(self, addr, port):
+        if self.conn == None:
+            if self.exposed_connectToMobot(addr, port) != 0:
+                return
+        self.conn.root.startVideoStream(VIDEO_PORT)
 
     def _updateStatus(self):
         # Poll status value from mobot
