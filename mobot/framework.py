@@ -410,7 +410,6 @@ class MobotService(rpyc.Service):
         CAMERA.framerate = FRAMERATE
         CAMERA.start_preview()
         time.sleep(0.2)
-        CAMERA.capture(self.stream, format='jpeg')
 
     def on_connect(self):
         info("received connection")
@@ -489,6 +488,7 @@ class MobotService(rpyc.Service):
         SAMPLESIZE = self.values['SIZE']
         CERTAINTY = self.values['CERT']
 
+        CAMERA.capture(self.stream, format='jpeg')
         data = np.fromstring(self.stream.getvalue(), dtype=np.uint8)
         # Decode img from string array, preserving color
         img = cv2.imdecode(data, 1) # in BGR order
