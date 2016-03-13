@@ -385,6 +385,7 @@ class MobotService(rpyc.Service):
         }
 
         self.trackingpts = []
+        self.callback = None
 
         self.vL = 0 # left speed
         self.vR = 0 # right speed
@@ -477,6 +478,9 @@ class MobotService(rpyc.Service):
         r = r * (maxspeed / 255.0)
         self._setMotorSpeed(l, r)
 
+    def exposed_setValueUpdateCallback(self, callback):
+        self.callback = callback
+
     @profile # summation of total time cost of computer vision
     def alphacv(self):
         BLUR_FACTOR = self.values['BLUR']
@@ -505,6 +509,7 @@ class MobotService(rpyc.Service):
             n=TRACK_PT_NUM, radius=RADIUS, a=ALPHA, b=BETA, c=GAMMA,
             threshold=THRESHOLD, samplesize=SAMPLESIZE, certainty=CERTAINTY)
 
+        if self.callback: self.callback(self.status, self.trackingpts)
         info(str(self.trackingpts))
         # TODO: PID + Speed setting
 
