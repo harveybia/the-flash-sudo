@@ -123,12 +123,13 @@ class InterfaceService(rpyc.Service):
         # ADDR: (str) address of service machine (can be mobot)
 
         self.trackingpts = []
-
         # Connection instance
         self.conn = None
+        # self._updated = False
 
     def on_connect(self):
         speaklog("connection established")
+        self.exposed_connectToMobot()
 
     def on_disconnect(self):
         speaklog("connection lost")
@@ -169,9 +170,15 @@ class InterfaceService(rpyc.Service):
         self.conn.root.startVideoStream(VIDEO_PORT)
 
     def exposed_getStatus(self):
+        # if self.conn != None and not self._updated:
+        #     self.status = self.conn.root.getMobotStatus()
+        #     self._updated = True
         return self.status
 
     def exposed_getTrackingPts(self):
+        # if self.conn != None and not self._updated:
+        #     self.trackingpts = self.conn.root.getTrackingPts()
+        #     self._updated = True
         return self.trackingpts
 
     def exposed_resetStatus(self):
@@ -196,7 +203,7 @@ class InterfaceService(rpyc.Service):
             # Temp Unit Test For Video:
             self.exposed_startStream(MOBOT_ADDR, MOBOT_PORT)
             # Temp Unit Test For Framework CV:
-            self.exposed_connectToMobot()
+            # self.exposed_connectToMobot()
 
     def exposed_updateValues(self, filterstates, taskstates, slides):
         # @param:

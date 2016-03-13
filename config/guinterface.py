@@ -192,7 +192,6 @@ class Interface(Application):
         self.conn.root.startStream(MOBOT_ADDR, MOBOT_PORT)
         time.sleep(0.5)
         self.video = startVideoStream()
-        self.trackingpts = self.conn.root.getTrackingPts()
         # self.image = readTkImage(self.video)
 
     def getMonitorSelectorList(self):
@@ -509,10 +508,11 @@ class Interface(Application):
         self.image = readTkImage(self.video)
         canvas.create_image(70,140,anchor=NW,image=self.image)
 
-        for pt in self.trackingpts:
-            x = pt[0] + 70
-            y = pt[1] + 140
-            self.drawPtStatistics(canvas, (x, y))
+        print self.conn.root.getTrackingPts()
+        # for pt in self.conn.root.getTrackingPts():
+        #     x = pt[0] + 70
+        #     y = pt[1] + 140
+        #     self.drawPtStatistics(canvas, (x, y))
 
     def drawButtons(self, canvas):
         ####################

@@ -369,7 +369,7 @@ class MobotService(rpyc.Service):
 
         self.uptime = time.time()
         self.missionuptime = time.time()
-        self._connected = False
+        # self._connected = False
 
         self.values = {
             'BRIG': 0, 'CNST': 50, 'BLUR': 4,
@@ -414,17 +414,17 @@ class MobotService(rpyc.Service):
 
     def on_connect(self):
         info("received connection")
-        self._connected = True
+        # self._connected = True
         self.loopthd.start()
 
     def on_disconnect(self):
         warn("connection lost")
-        self._connected = False
+        # self._connected = False
         self.loopstop.set()
         self.exposed_stopVideoStream()
 
     def exposed_recognized(self):
-        return False if self._connected else True
+        return True
 
     def exposed_getMobotStatus(self):
         # Returning the weak reference to states dict
