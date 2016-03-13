@@ -408,7 +408,7 @@ class MobotService(rpyc.Service):
         init("enabling camera")
         CAMERA.start_preview()
         time.sleep(0.2)
-        camera.capture(self.stream, format='jpeg')
+        CAMERA.capture(self.stream, format='jpeg')
 
     def on_connect(self):
         info("received connection")

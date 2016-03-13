@@ -188,6 +188,8 @@ class InterfaceService(rpyc.Service):
 
             # Temp Unit Test For Video:
             self.exposed_startStream(MOBOT_ADDR, MOBOT_PORT)
+            # Temp Unit Test For Framework CV:
+            self.exposed_connectToMobot()
 
     def exposed_updateValues(self, filterstates, taskstates, slides):
         # @param:
