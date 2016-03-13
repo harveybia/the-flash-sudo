@@ -501,6 +501,7 @@ class MobotService(rpyc.Service):
             n=TRACK_PT_NUM, radius=RADIUS, a=ALPHA, b=BETA, c=GAMMA,
             threshold=THRESHOLD, samplesize=SAMPLESIZE, certainty=CERTAINTY)
 
+        info(str(self.trackingpts))
         # TODO: PID + Speed setting
 
     def update(self):
