@@ -106,10 +106,10 @@ class InterfaceService(rpyc.Service):
         # MAXS: (int) [0,255] maximum speed
 
         self.status = {
-            'STAT': STAT_ONLINE, 'ACTT': 0, 'MIST': 0, 'DELY': 0,
-            'GATC': 0, 'SPED': 0, 'PROT': 0, 'CVST': STAT_ONLINE,
+            'STAT': STAT_DISCONNECTED, 'ACTT': 0, 'MIST': 0, 'DELY': 0,
+            'GATC': 0, 'SPED': 0, 'PROT': 0, 'CVST': STAT_DISCONNECTED,
             'BATT': 100, 'ADDR': socket.gethostname()
-        }
+        } # This is a placeholder in case mobot is offline
         # @key:
         # STAT: (int) status of mobot
         # ACTT: (int) active time in seconds
@@ -127,44 +127,44 @@ class InterfaceService(rpyc.Service):
 
     def on_connect(self):
         speaklog("connection established")
-        self.status['STAT'] = STAT_ONLINE
 
     def on_disconnect(self):
         speaklog("connection lost")
-        self.status['STAT'] = STAT_DISCONNECTED
 
     def exposed_connectToMobot(self, addr=MOBOT_ADDR, port=MOBOT_PORT):
         try:
             self.conn = rpyc.connect(addr, port)
             if self.conn.root.recognized():
-                speaklog("connected to mobot")
+                speaklog("connected to mobot, syncing data")
+                self.status['STAT'] = STAT_ONLINE
+                self.status = self.conn.root.getMobotStatus()
                 return 0
             else:
                 speaklog("connection refused")
+                self.status['STAT'] = STAT_DISCONNECTED
                 return 2
         except:
             speaklog("service unavailable")
+            self.status['STAT'] = STAT_DISCONNECTED
             return 1
 
     def exposed_disconnectFromMobot(self):
         # TODO: reset self.conn
-        pass
+        # Reset Status to placeholder
+        self.status = {
+            'STAT': STAT_DISCONNECTED, 'ACTT': 0, 'MIST': 0, 'DELY': 0,
+            'GATC': 0, 'SPED': 0, 'PROT': 0, 'CVST': STAT_DISCONNECTED,
+            'BATT': 100, 'ADDR': socket.gethostname()
+        }
 
     def exposed_startStream(self, addr, port):
+        return # TODO: this method is slow and consumes bandwidth
         if self.conn == None:
             if self.exposed_connectToMobot(addr, port) != 0:
                 return
         self.conn.root.startVideoStream(VIDEO_PORT)
 
-    def _updateStatus(self):
-        # Poll status value from mobot
-        if not self.conn: return
-        status = self.conn.root.getMobotStatus()
-        for key in self.status:
-            self.status[key] = status[key]
-
     def exposed_getStatus(self):
-        self._updateStatus()
         return self.status
 
     def exposed_resetStatus(self):
@@ -185,6 +185,9 @@ class InterfaceService(rpyc.Service):
             speaklog('mission is a go')
             self.status['STAT'] = STAT_MISSION
             # TODO: do something to trigger mission
+
+            # Temp Unit Test For Video:
+            self.exposed_startStream(MOBOT_ADDR, MOBOT_PORT)
 
     def exposed_updateValues(self, filterstates, taskstates, slides):
         # @param:

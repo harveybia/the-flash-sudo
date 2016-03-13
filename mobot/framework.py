@@ -1,15 +1,34 @@
+#####################################
+# Core Algorithm and Mobot Platform #
+# copyright 2015-2016 Harvey Shi    #
+#####################################
+flash = \
+"""
+  __  .__                       _____.__                .__
+_/  |_|  |__   ____           _/ ____\  | _____    _____|  |__
+\   __\  |  \_/ __ \   ______ \   __\|  | \__  \  /  ___/  |  \\
+ |  | |   Y  \  ___/  /_____/  |  |  |  |__/ __ \_\___ \|   Y  \\
+ |__| |___|  /\___  >          |__|  |____(____  /____  >___|  /
+           \/     \/                           \/     \/     \/
+"""
+
 import io
+import cv2
 import time
+import math
 import rpyc
 import struct
 import socket
 import picamera
 import threading
+import numpy as np
 from BrickPi import *
 from rpyc.utils.server import ThreadedServer
 from utils import init, info, warn
 
 # Reference: BrickPi_Python/Sensor_Examples/*.py
+# Reference: http://picamera.readthedocs.org/en/release-1.10/recipes1.html
+
 # Setup serial port for communications
 BrickPiSetup()
 
@@ -78,6 +97,238 @@ STAT_DISCONNECTED = 23
 STAT_MISSION = 24
 STAT_ABORT = 25
 
+# ---------- COMPUTER VISION CORE ALGORITHM ----------
+
+def profile(fn):
+    # A decorator function to determine the run time of functions
+    def with_profiling(*args, **kwargs):
+        start_time = time.time()
+        ret = fn(*args, **kwargs)
+        elapsed_time = time.time() - start_time
+        print "Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time)
+        return ret
+    return with_profiling
+
+HEIGHT, WIDTH = V_HEIGHT, V_WIDTH
+
+def grayToRGB(img):
+    # Converts grayscale image into RGB
+    # This conversion uses numpy array operation and takes less time
+    return cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+
+# I only put useful auxiliary functions here, to find more about my
+# work on cv checkout ../config/config.py
+
+@profile
+def findBlurred(img, blur_factor):
+    return cv2.medianBlur(img, int(blur_factor//2*2+1))
+
+def isValidPt(img, x, y):
+    # Determines if pt lies in img
+    h, w = img.shape[0], img.shape[1]
+    return (0 <= x and x < w) and (0 <= y and y < h)
+
+def _isPotentialTrackingPoint(grayimg, pt,
+    threshold=180, samplesize=4, certainty=0.7):
+    # Using threshold value to identify whether it is a valid point
+    # @param:
+    # grayimg: (ndarray) the image with one channel: graysacle
+    # pt: ([2D]tuple) the point to check
+    # threshold: (int) the threshold value in grayscale
+    # samplesize: (int) the size of sampling matrix
+    # certainty: (float) the saturation of valid points in matrix
+
+    h, w = grayimg.shape[0], grayimg.shape[1]
+    cx, cy = pt[0], pt[1] # Center coordinates
+    if grayimg[cy, cx] > threshold:
+        # The point satisifies threshold, we look at a square near it
+        # and increment validcount as we find more valid pixels
+        totalcount = samplesize ** 2
+        validcount = 0
+        for x in xrange(cx - samplesize, cx + samplesize + 1):
+            for y in xrange(cy - samplesize, cy + samplesize + 1):
+                if isValidPt(grayimg, x, y):
+                    # Valid dimensions, index within bounds
+                    if grayimg[y, x] > threshold: validcount += 1
+                else:
+                    totalcount -= 1
+        # We have a count of valid points, compare it with threshold count
+        if validcount > certainty * totalcount: return True
+    return False
+
+def _getTrackingPointProbability(img, pt):
+    # This is a PMF (Probability Mass Function) for tracking points
+    # @param:
+    # img: (ndarray) the image with one channel: graysacle
+    # pt: ([2D]tuple) the point to check
+    h, w = img.shape[0], img.shape[1]
+    x, y = pt[0], pt[1]
+    concession = 0.1
+    return min(1 - ((x-w/2)/w)**2 - ((y-h/2)/h)**2, 1 - concession)
+
+def _getNextTrackingPtProbability(img, pt, prevpt, basis,
+    a, b, c):
+    # This is a PMF, for next tracking point position
+    # @param:
+    # img: (ndarray) the image with one channel: grayscale
+    # pt: ([2D]tuple) the point to check
+    # prevpt: ([2D]tuple) the previous tracking point
+    # basis: ([2D]tuple) the origin vector for probabilistic sampling circle
+    #   which directs to direction of highest favorability
+    # a: (float) the preset probability of alpha region
+    # b: (float) the preset probability of beta region
+    # c: (float) the preset probability of gamma region
+    bx, by = basis[0], basis[1]
+    theta0 = math.atan2(by, bx) # -pi < theta <= pi
+
+    dx, dy = pt[0] - prevpt[0], pt[1] - prevpt[1]
+    dtheta = abs(math.atan2(dy, dx) - theta0)
+    if 0 <= dtheta < math.pi/6:
+        return a
+    elif math.pi/6 <= dtheta < math.pi/2:
+        return b
+    elif math.pi/2 <= dtheta < math.pi:
+        return c
+    else:
+        return 0
+
+def _getPointsAroundPoint(pt, radius, step=200):
+    # Returns a list of points in a disk around pt
+    # @param:
+    # pt: ([2D]tuple) the center point
+    # radius: (int) the radius of disk
+    # step: (float) the step in radian
+    # @returns:
+    # list: collection of points in disk
+    res = []
+    x, y = pt[0], pt[1]
+    for i in xrange(0, step):
+        theta = 2 * math.pi / step * i
+        res.append( (int(x + radius * math.cos(theta)),
+            int(y + radius * math.sin(theta))) )
+    return res
+
+@profile
+def samplePoints(grayimg, isTrackingPt,
+     n=5, radius=6, a=0.6, b=0.3, c=0.1,
+     threshold=180, samplesize=4, certainty=0.7):
+    # @param:
+    # grayimg: (nparray) the image we want to process, in grayscale
+    # isTrackingPt: (grayimg, pt, threshold, samplesize, certainty) -> bool
+    #   A function that determines whether the point is a tracking point or not
+    # n: number of points we wish to sample
+    # radius: radius of circle within which we want to search for points
+    # a: (float) the preset probability of alpha region
+    # b: (float) the preset probability of beta region
+    # c: (float) the preset probability of gamma region
+    # threshold: (int) the threshold value in grayscale
+    # samplesize: (int) the size of sampling matrix
+    # certainty: (float) the saturation of valid points in matrix
+
+    # Mathematically speaking, n * radius should be less than height of image
+    # Test if parameters are valid:
+    h, w = grayimg.shape[0], grayimg.shape[1]
+
+    if h / radius - 1 <= n:
+        raise ParameterInvalidException("sampling circles exceed maximum")
+    if type(grayimg) is not np.ndarray:
+        raise ParameterInvalidException("input image not valid ndarray")
+
+    #grayimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    points = []
+
+    # Main loop driving the sampling process
+    basis = [0, 0 - radius]
+    for i in xrange(n):
+        # i: the index of tracking point
+        if i == 0:
+            # Base case, we want to find a starting pt to work with
+            best = ((w/2, h - radius), 0.1)
+            for col in xrange(0, w):
+                pt = (col, h - radius)
+                if isTrackingPt(grayimg, pt,
+                    threshold, samplesize, certainty):
+                    p = _getTrackingPointProbability(grayimg, pt)
+                    if p > best[1]: best = (pt, p)
+            points.append(best[0])
+        else:
+            assert(len(points) > 0)
+            # Work with previous located pt
+            prevpt = points[-1]
+            # Predict the next point location. If not found, this is to be
+            # default.
+            # NOTE: It would be possibly better to increase sampling radius
+            # once the previous sampling gave us the less promising result.
+            best = ((prevpt[0] + basis[0], prevpt[1] + basis[1]), 0.1)
+            for pt in _getPointsAroundPoint(prevpt, radius):
+                x, y = pt[0], pt[1]
+                if isValidPt(grayimg, x, y) and isTrackingPt(grayimg, pt,
+                    threshold, samplesize, certainty):
+                    p = _getNextTrackingPtProbability(grayimg, pt, prevpt,
+                        basis, a, b, c)
+                    if p > best[1]: best = (pt, p)
+            points.append(best[0])
+            assert(len(points) > 1)
+            # Update basis
+            basis[0] = points[-1][0] - points[-2][0]
+            basis[1] = points[-1][1] - points[-2][1]
+            print best
+            print basis
+    return points
+
+@profile
+def sampleContourArray(img, interval=12, injective=False):
+    #TODO: This function has malfunctioning x, y correspondance.
+    h = img.shape[0]
+    w = img.shape[1]
+    # We sample the processed, contour image to produce a set
+    # of points for bezier curve approximation
+    # Here we sample the image with interval of size of stroke = 3
+
+    # List for data point storage
+    P = []
+    points = {}
+    for x in xrange(w-1):
+        for y in reversed(xrange(h-1)):
+            if x % interval == 0 and y % interval == 0:
+                pixel = img[y, x]
+                if pixel[0] == 0 and pixel[1] == 255 and pixel[2] == 0:
+                    if injective:
+                        points[x] = y
+                    else:
+                        P.append((x, y))
+    if injective:
+        for key in points:
+            P.append((key, points[key]))
+
+    P = sorted(P)
+
+    n = len(P)
+    print "points found: %d"%len(P)
+    # n = len(P) - 1
+    n = n - 1
+    # Degree of curve
+    k = 4
+    # property of b-splines: m = n + k + 1
+    m = n + k + 1
+    # t between clamped ends will be evenly spaced
+    _t = 1.0 / (m - k * 2)
+    # clamp ends and get the t between them
+    t = k * [0] + [t_ * _t for t_ in xrange(m - (k * 2) + 1)] + [1] * k
+
+    # Generate curve. Usage: S(x) -> y
+    S = bezier.Bspline(P, t, k)
+    #print P
+    return S
+
+@profile
+def calculateDesiredVelocityVector():
+    # Takes in a equation (set) and calculate desired velocity vector
+    # TODO: Integrate PID algorithm
+    pass
+
+# ----------------------- END ------------------------
+
 def debugConnection(sock, addr, port):
     # Prints the details of a connection
     warn("connection timed out, plesae check listener status")
@@ -116,9 +367,13 @@ class MobotService(rpyc.Service):
         rpyc.Service.__init__(self, *args, **kwargs)
         init("mobot service instance created")
 
+        self.uptime = time.time()
+        self.missionuptime = time.time()
+        self._connected = False
+
         self.values = {
             'BRIG': 0, 'CNST': 50, 'BLUR': 4,
-            'THRS': 150, 'SIZE': 4, 'CERT': 0.7, 'PTS': 5, 'RADI': 6,
+            'THRS': 150, 'SIZE': 4, 'CERT': 0.7, 'PTS': 5, 'RADI': 10,
                 'A': 0.6, 'B': 0.3, 'C': 0.1,
             'TCHS': 0.5, 'GATG': 14, 'MAXS': 100
         }
@@ -129,6 +384,8 @@ class MobotService(rpyc.Service):
             'BATT': 100, 'ADDR': socket.gethostname()
         }
 
+        self.trackingpts = []
+
         self.vL = 0 # left speed
         self.vR = 0 # right speed
         self.encL = 0 # left encoder
@@ -136,39 +393,51 @@ class MobotService(rpyc.Service):
 
         self.touchcount = 0
 
+        # Main EV3 control thread
         self.loopstop = threading.Event()
         self.loopthd = threading.Thread(target=self.mainloop,
             args=(self.loopstop,))
         self.loopthd.daemon = True
 
+        # Remote video streaming therad
         self.videostop = threading.Event()
         self.videothd = None
 
+        # Enable camera
+        self.stream = io.BytesIO()
+        init("enabling camera")
+        CAMERA.start_preview()
+        time.sleep(0.2)
+        camera.capture(self.stream, format='jpeg')
+
     def on_connect(self):
         info("received connection")
+        self._connected = True
         self.loopthd.start()
 
     def on_disconnect(self):
         warn("connection lost")
+        self._connected = False
         self.loopstop.set()
         self.exposed_stopVideoStream
 
     def exposed_recognized(self):
-        return True
+        return False if self._connected else True
 
     def exposed_getMobotStatus(self):
-        self._updateStatus()
+        # Returning the weak reference to states dict
+        # Changing the values in dict will directly affect local var
         return self.status
 
-    def exposed_configureSettings(self, values):
-        # @param:
-        # values: (dict) the dictionary of setting values
-        try:
-            for key in self.values:
-                self.values[key] = values[key]
-        except:
-            warn("invalid options in configureSettings()")
+    def exposed_getMobotValues(self):
+        # Returning the weak reference to values dict
+        # Changing the values in dict will directly affect local var
+        return self.values
 
+    def exposed_getTrackingPts(self):
+        return self.trackingpts
+
+    # Not suggested but usable: drags down performance dramatically
     def exposed_startVideoStream(self, port):
         # Establishs a TCP connection with interface for video streaming
         if self.videothd != None:
@@ -186,19 +455,56 @@ class MobotService(rpyc.Service):
 
     def _updateStatus(self):
         # Polls device information and updates status dict
-        pass
+        self.status['ACTT'] = int(time.time() - self.uptime)
+        self.status['SPED'] = self._calcMobotSpeed()
 
     def _setMotorSpeed(self, l, r):
         if abs(l) > 255 or abs(r) > 255:
             raise ParameterInvalidException("Invalid motor speeds")
-        self.vL = l; self.vR = r
+        self.vL = int(l); self.vR = int(r)
         # BrickPi.MotorSpeed[L] = l
         # BrickPi.MotorSpeed[R] = r
 
+    def _calcMobotSpeed(self):
+        # Calculates speed of robot relatively
+        return int((self.vL + self.vR) / 2.0)
+
     def exposed_setMotorSpeed(self, l, r):
+        maxspeed = self.values['MAXS']
+        l = l * (maxspeed / 255.0)
+        r = r * (maxspeed / 255.0)
         self._setMotorSpeed(l, r)
 
+    @profile # summation of total time cost of computer vision
+    def alphacv(self):
+        BLUR_FACTOR = self.values['BLUR']
+        TRACK_PT_NUM = self.values['PTS']
+        RADIUS = self.values['RADI']
+        ALPHA = self.values['A']
+        BETA = self.values['B']
+        GAMMA = 1 - ALPHA - BETA
+        THRESHOLD = self.values['THRS']
+        SAMPLESIZE = self.values['SIZE']
+        CERTAINTY = self.values['CERT']
+
+        data = np.fromstring(self.stream.getvalue(), dtype=np.uint8)
+        # Decode img from string array, preserving color
+        img = cv2.imdecode(data, 1) # in BGR order
+        # Generate grayscale image
+        grayimg = cv2.cvtColor(cv2.COLOR_BGR2GRAY)
+        # Blur image
+        blurred = findBlurred(grayimg, BLUR_FACTOR)
+        # Find tracking points
+        self.trackingpts = samplePoints(blurred, _isPotentialTrackingPoint,
+            n=TRACK_PT_NUM, radius=RADIUS, a=ALPHA, b=BETA, c=GAMMA,
+            threshold=THRESHOLD, samplesize=SAMPLESIZE, certainty=CERTAINTY)
+
+        # TODO: PID + Speed setting
+
     def update(self):
+        # Capture frame and determine gesture
+        self.alphacv()
+
         self.touchcount = abs(self.touchcount - 1)
         BrickPi.MotorSpeed[L] = self.vL
         BrickPi.MotorSpeed[R] = self.vR
@@ -218,6 +524,8 @@ class MobotService(rpyc.Service):
             # Update encoder values
             self.encL = BrickPi.Encoder[L]
             self.encR = BrickPi.Encoder[R]
+
+        self._updateStatus()
 
     def mainloop(self, stop_event):
         while not stop_event.is_set():
