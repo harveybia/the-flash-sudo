@@ -246,7 +246,7 @@ def samplePoints(grayimg, isTrackingPt,
         if i == 0:
             # Base case, we want to find a starting pt to work with
             best = ((w/2, h - radius), 0.1)
-            for col in xrange(0, w):
+            for col in xrange(0, w, radius):
                 pt = (col, h - radius)
                 if isTrackingPt(grayimg, pt,
                     threshold, samplesize, certainty):
