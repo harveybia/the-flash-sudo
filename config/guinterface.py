@@ -192,6 +192,7 @@ class Interface(Application):
         self.conn.root.startStream(MOBOT_ADDR, MOBOT_PORT)
         time.sleep(0.5)
         self.video = startVideoStream()
+        self.trackingpts = self.conn.root.getTrackingPts()
         # self.image = readTkImage(self.video)
 
     def getMonitorSelectorList(self):
@@ -483,6 +484,14 @@ class Interface(Application):
         canvas.create_text(23, 45, anchor=NW, text=date,
             font="Airborne-II-Pilot 16", fill="gray85")
 
+    def drawPtStatistics(self, canvas, pt, basis=(0,-1), prob=60):
+        canvas.create_oval(pt[0]-2, pt[1]-2, pt[0]+2, pt[1]+2,
+            outline="aquamarine")
+        canvas.create_text((pt[0]+5, pt[1]), anchor='w', text="%d%%"%prob,
+            font=("Airborne", 10), fill='aquamarine')
+        canvas.create_line(pt[0], pt[1], pt[0]+basis[0], pt[1]+basis[1],
+            fill="red", width=1, arrow=tk.LAST)
+
     def drawVideo(self, canvas):
         canvas.create_text(30, 90, anchor=NW, text="LIVE FEED",
             font="airborne 18", fill="white")
@@ -499,6 +508,11 @@ class Interface(Application):
         # put video on canvas #
         self.image = readTkImage(self.video)
         canvas.create_image(70,140,anchor=NW,image=self.image)
+
+        for pt in self.trackingpts:
+            x = pt[0] + 70
+            y = pt[1] + 140
+            self.drawPtStatistics(canvas, (x, y))
 
     def drawButtons(self, canvas):
         ####################

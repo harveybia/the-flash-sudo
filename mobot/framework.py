@@ -192,7 +192,7 @@ def _getNextTrackingPtProbability(img, pt, prevpt, basis,
     else:
         return 0
 
-def _getPointsAroundPoint(pt, radius, step=200):
+def _getPointsAroundPoint(pt, radius, step=100):
     # Returns a list of points in a disk around pt
     # @param:
     # pt: ([2D]tuple) the center point
@@ -495,8 +495,7 @@ class MobotService(rpyc.Service):
         img = cv2.imdecode(data, 1) # in BGR order
         # Generate grayscale image
         grayimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        print grayimg
-
+        # Reset stream for next capture
         self.stream.seek(0)
         self.stream.truncate()
         # Blur image

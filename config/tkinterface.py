@@ -122,6 +122,8 @@ class InterfaceService(rpyc.Service):
         # BATT: (int) battery percentage
         # ADDR: (str) address of service machine (can be mobot)
 
+        self.trackingpts = []
+
         # Connection instance
         self.conn = None
 
@@ -138,6 +140,7 @@ class InterfaceService(rpyc.Service):
                 speaklog("connected to mobot, syncing data")
                 self.status['STAT'] = STAT_ONLINE
                 self.status = self.conn.root.getMobotStatus()
+                self.trackingpts = self.conn.root.getTrackingPts()
                 return 0
             else:
                 speaklog("connection refused")
@@ -156,6 +159,7 @@ class InterfaceService(rpyc.Service):
             'GATC': 0, 'SPED': 0, 'PROT': 0, 'CVST': STAT_DISCONNECTED,
             'BATT': 100, 'ADDR': socket.gethostname()
         }
+        self.trackingpts = []
 
     def exposed_startStream(self, addr, port):
         return # TODO: this method is slow and consumes bandwidth
@@ -166,6 +170,9 @@ class InterfaceService(rpyc.Service):
 
     def exposed_getStatus(self):
         return self.status
+
+    def exposed_getTrackingPts(self):
+        return self.trackingpts
 
     def exposed_resetStatus(self):
         speaklog('status reset')
