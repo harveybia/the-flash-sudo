@@ -491,7 +491,7 @@ class MobotService(rpyc.Service):
         # Decode img from string array, preserving color
         img = cv2.imdecode(data, 1) # in BGR order
         # Generate grayscale image
-        grayimg = cv2.cvtColor(cv2.COLOR_BGR2GRAY)
+        grayimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         # Blur image
         blurred = findBlurred(grayimg, BLUR_FACTOR)
         # Find tracking points
