@@ -272,8 +272,8 @@ def samplePoints(grayimg, isTrackingPt,
             # Update basis
             basis[0] = points[-1][0] - points[-2][0]
             basis[1] = points[-1][1] - points[-2][1]
-            print best
-            print basis
+            # print best
+            # print basis
     return points
 
 @profile
