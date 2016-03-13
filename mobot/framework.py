@@ -406,6 +406,8 @@ class MobotService(rpyc.Service):
         # Enable camera
         self.stream = io.BytesIO()
         init("enabling camera")
+        CAMERA.resolution = (V_WIDTH, V_HEIGHT)
+        CAMERA.framerate = FRAMERATE
         CAMERA.start_preview()
         time.sleep(0.2)
         CAMERA.capture(self.stream, format='jpeg')
