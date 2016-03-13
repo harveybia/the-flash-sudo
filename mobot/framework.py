@@ -192,18 +192,20 @@ def _getNextTrackingPtProbability(img, pt, prevpt, basis,
     else:
         return 0
 
-def _getPointsAroundPoint(pt, radius, step=100):
+def _getPointsAroundPoint(pt, radius, basis, step=50):
     # Returns a list of points in a disk around pt
     # @param:
     # pt: ([2D]tuple) the center point
     # radius: (int) the radius of disk
+    # basis: ([2D]vector) the direction in which we should look
     # step: (float) the step in radian
     # @returns:
     # list: collection of points in disk
     res = []
     x, y = pt[0], pt[1]
-    for i in xrange(0, step):
-        theta = 2 * math.pi / step * i
+    for i in xrange(-step/2, step/2):
+        theta0 = math.atan2(basis[1], basis[0])
+        theta = theta0 + math.pi / step * i
         res.append( (int(x + radius * math.cos(theta)),
             int(y + radius * math.sin(theta))) )
     return res
@@ -260,7 +262,7 @@ def samplePoints(grayimg, isTrackingPt,
             # NOTE: It would be possibly better to increase sampling radius
             # once the previous sampling gave us the less promising result.
             best = ((prevpt[0] + basis[0], prevpt[1] + basis[1]), 0.1)
-            for pt in _getPointsAroundPoint(prevpt, radius):
+            for pt in _getPointsAroundPoint(prevpt, radius, basis):
                 x, y = pt[0], pt[1]
                 if isValidPt(grayimg, x, y) and isTrackingPt(grayimg, pt,
                     threshold, samplesize, certainty):
