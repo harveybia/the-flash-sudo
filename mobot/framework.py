@@ -373,7 +373,7 @@ class MobotService(rpyc.Service):
 
         self.values = {
             'BRIG': 0, 'CNST': 50, 'BLUR': 4,
-            'THRS': 150, 'SIZE': 4, 'CERT': 0.7, 'PTS': 5, 'RADI': 6,
+            'THRS': 150, 'SIZE': 4, 'CERT': 0.7, 'PTS': 4, 'RADI': 6,
                 'A': 0.6, 'B': 0.3, 'C': 0.1,
             'TCHS': 0.5, 'GATG': 14, 'MAXS': 100
         }

@@ -134,19 +134,11 @@ class InterfaceService(rpyc.Service):
     def on_disconnect(self):
         speaklog("connection lost")
 
-    def updateMobotStatus(self, status, trackingpts):
-        # This method is called by mobot!
-        for key in status:
-            self.status[key] = status[key]
-        for pt in trackingpts:
-            self.trackingpts.append(pt)
-
     def exposed_connectToMobot(self, addr=MOBOT_ADDR, port=MOBOT_PORT):
         try:
             self.conn = rpyc.connect(addr, port)
             if self.conn.root.recognized():
                 speaklog("connected to mobot, syncing data")
-                self.conn.root.setValueUpdatedCallback(self.updateMobotStatus)
                 self.status['STAT'] = STAT_ONLINE
                 # self.status = self.conn.root.getMobotStatus()
                 # self.trackingpts = self.conn.root.getTrackingPts()
