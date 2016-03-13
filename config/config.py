@@ -115,6 +115,7 @@ def getMobotStatus():
     pass
 
 def isValidPt(img, x, y):
+    # Determines if pt lies in img
     h, w = img.shape[0], img.shape[1]
     return (0 <= x and x < w) and (0 <= y and y < h)
 
