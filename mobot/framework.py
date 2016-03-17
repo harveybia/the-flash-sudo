@@ -58,7 +58,7 @@ BrickPiSetupSensors()
 # Camera configuration
 CAMERA = picamera.PiCamera()
 V_WIDTH, V_HEIGHT = 320, 240
-FRAMERATE = 24
+FRAMERATE = 5
 
 # Service configuration
 MOBOT_PORT = 15112
