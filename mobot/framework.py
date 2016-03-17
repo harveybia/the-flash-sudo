@@ -495,9 +495,11 @@ class MobotService(rpyc.Service):
         SAMPLESIZE = self.values['SIZE']
         CERTAINTY = self.values['CERT']
 
+        st = time.time()
         CAMERA.capture(self.stream, format='jpeg')
         data = np.fromstring(self.stream.getvalue(), dtype=np.uint8)
         # Decode img from string array, preserving color
+        print "time taken for image capture: %.3f"%time.time() - st
         img = cv2.imdecode(data, 1) # in BGR order
         # Generate grayscale image
         grayimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
