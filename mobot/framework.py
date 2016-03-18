@@ -435,9 +435,10 @@ class MobotService(rpyc.Service):
         rpyc.Service.__init__(self, *args, **kwargs)
         init("mobot service instance created")
 
+        # Status
         self.uptime = time.time()
         self.missionuptime = time.time()
-        # self._connected = False
+        self._connected = False
 
         self.values = {
             'BRIG': 0, 'CNST': 50, 'BLUR': 4,
@@ -453,7 +454,6 @@ class MobotService(rpyc.Service):
         }
 
         self.trackingpts = []
-        self.callback = None
 
         self.vL = 0 # left speed
         self.vR = 0 # right speed
@@ -504,14 +504,14 @@ class MobotService(rpyc.Service):
 
     def on_connect(self):
         info("received connection")
-        # self._connected = True
-        # self.loopstop.clear()
+        self._connected = True
+        self.loopstop.clear()
         self.done = False
         self.loopthd.start()
 
     def on_disconnect(self):
         warn("connection lost")
-        # self._connected = False
+        self._connected = False
         self.done = True
         self.loopstop.set()
         self.exposed_stopVideoStream()
@@ -525,7 +525,7 @@ class MobotService(rpyc.Service):
             # processor.join()
 
     def exposed_recognized(self):
-        return True
+        return False if self._connected else True
 
     def exposed_getMobotStatus(self):
         # Returning the weak reference to states dict
@@ -578,43 +578,6 @@ class MobotService(rpyc.Service):
         r = r * (maxspeed / 255.0)
         self._setMotorSpeed(l, r)
 
-    def exposed_setValueUpdateCallback(self, callback):
-        self.callback = callback
-
-    @profile # summation of total time cost of computer vision
-    def alphacv(self):
-        BLUR_FACTOR = self.values['BLUR']
-        TRACK_PT_NUM = self.values['PTS']
-        RADIUS = self.values['RADI']
-        ALPHA = self.values['A']
-        BETA = self.values['B']
-        GAMMA = 1 - ALPHA - BETA
-        THRESHOLD = self.values['THRS']
-        SAMPLESIZE = self.values['SIZE']
-        CERTAINTY = self.values['CERT']
-
-        st = time.time()
-        CAMERA.capture(self.stream, format='jpeg')
-        data = np.fromstring(self.stream.getvalue(), dtype=np.uint8)
-        # Decode img from string array, preserving color
-        print "time taken for image capture: %.3f"%(time.time() - st)
-        img = cv2.imdecode(data, 1) # in BGR order
-        # Generate grayscale image
-        grayimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        # Reset stream for next capture
-        self.stream.seek(0)
-        self.stream.truncate()
-        # Blur image
-        blurred = findBlurred(grayimg, BLUR_FACTOR)
-        # Find tracking points
-        self.trackingpts = samplePoints(blurred, _isPotentialTrackingPoint,
-            n=TRACK_PT_NUM, radius=RADIUS, a=ALPHA, b=BETA, c=GAMMA,
-            threshold=THRESHOLD, samplesize=SAMPLESIZE, certainty=CERTAINTY)
-
-        if self.callback: self.callback(self.status, self.trackingpts)
-        info(str(self.trackingpts))
-        # TODO: PID + Speed setting
-
     def update(self):
         # Capture frame and determine gesture
         # self.alphacv() # Removed: Image Processing doesnt happen here anymore
@@ -642,12 +605,6 @@ class MobotService(rpyc.Service):
         self._updateStatus()
 
     def mainloop(self, stop_event):
-        """
-        while not stop_event.is_set():
-            self.update()
-            # Refresh period
-            stop_event.wait(0.05)]
-        """
         BUFFERSIZE = 4
         self.pool = [ImageProcessor(self) for i in xrange(BUFFERSIZE)]
         CAMERA.capture_sequence(MobotService.yieldstreams(self),

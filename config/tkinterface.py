@@ -12,11 +12,12 @@ _/  |_|  |__   ____           _/ ____\  | _____    _____|  |__
            \/     \/                           \/     \/     \/
 """
 
-import Tkinter as tk
 import sys
 import time
 import rpyc
 import socket
+import threading
+import Tkinter as tk
 from utils import speak, speaklog, info
 from rpyc.utils.server import ThreadedServer
 
@@ -125,7 +126,9 @@ class InterfaceService(rpyc.Service):
         self.trackingpts = []
         # Connection instance
         self.conn = None
-        # self._updated = False
+        self.updatestop = threading.Event()
+        self.updatethd = threading.Thread(target=self.updateInfo,
+            args=(self.updatestop,))
 
     def on_connect(self):
         speaklog("connection established")
@@ -133,32 +136,43 @@ class InterfaceService(rpyc.Service):
 
     def on_disconnect(self):
         speaklog("connection lost")
+        self.conn = None
+        self.exposed_disconnectFromMobot()
+
+    def updateInfo(self, stop_event):
+        while not stop_event.is_set():
+            time.sleep(0.2)
+            # Update info with 0.2 seconds interval
+            pass # We are not so desperate to use it
 
     def exposed_connectToMobot(self, addr=MOBOT_ADDR, port=MOBOT_PORT):
         try:
             self.conn = rpyc.connect(addr, port)
             if self.conn.root.recognized():
                 speaklog("connected to mobot, syncing data")
-                self.status['STAT'] = STAT_ONLINE
-                # self.status = self.conn.root.getMobotStatus()
-                # self.trackingpts = self.conn.root.getTrackingPts()
+                self.status = self.conn.root.getMobotStatus()
+                self.trackingpts = self.conn.root.getTrackingPts()
                 return 0
             else:
                 speaklog("connection refused")
-                self.status['STAT'] = STAT_DISCONNECTED
                 return 2
         except:
             speaklog("service unavailable")
-            self.status['STAT'] = STAT_DISCONNECTED
             return 1
 
     def exposed_disconnectFromMobot(self):
-        # TODO: reset self.conn
         # Reset Status to placeholder
+        if self.conn != None: self.conn.close()
         self.status = {
             'STAT': STAT_DISCONNECTED, 'ACTT': 0, 'MIST': 0, 'DELY': 0,
             'GATC': 0, 'SPED': 0, 'PROT': 0, 'CVST': STAT_DISCONNECTED,
             'BATT': 100, 'ADDR': socket.gethostname()
+        }
+        self.values = {
+            'BRIG': 0, 'CNST': 50, 'BLUR': 4,
+            'THRS': 150, 'SIZE': 4, 'CERT': 0.7, 'PTS': 5, 'RADI': 6,
+                'A': 0.6, 'B': 0.3, 'C': 0.1,
+            'TCHS': 0.5, 'GATG': 14, 'MAXS': 100
         }
         self.trackingpts = []
 
