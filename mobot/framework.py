@@ -415,16 +415,90 @@ class MobotService(rpyc.Service):
         time.sleep(0.2)
         # CAMERA.capture_continuous(self.stream, format='jpeg')
 
+        # Image Processor Control Variables
+        self.done = False # stops Image Processor
+        self.lock = threading.Lock()
+        self.pool = [] # Pool of Image Processors
+
+    class ImageProcessor(threading.Thread):
+        # An image processor class that does the processing upon frame ready
+        def __init__(self, master):
+            super(ImageProcessor, self).__init__()
+            self.master = master
+            self.stream = io.BytesIO()
+            self.event = threading.Event()
+            self.terminated = False
+            self.start()
+
+        @profile
+        def betacv(self, img):
+            # Do the image processing
+            pass
+
+        def run(self):
+            # Runs as separate thread
+            # If you want to terminate the stream generator set
+            # self.master.done = True
+            while not self.terminated:
+                if self.event.wait(1):
+                    try:
+                        self.stream.seek(0)
+                        # Do the image processing
+                        img = data = np.fromstring(self.stream.getvalue(),
+                            dtype=np.uint8)
+                        self.betacv(img)
+
+                        # Control the robot
+                        # self.vL = ???
+                        # self.vR = ???
+                    except:
+                        warn("image processor exception, frame skipped")
+                    finally:
+                        # Reset the stream and event
+                        self.stream.seek(0)
+                        self.stream.truncate()
+                        self.event.clear()
+                        # Return to pool for next frame
+                        with self.master.lock:
+                            self.master.pool.append(self)
+
+    @staticmethod
+    def yieldstreams(scv):
+        # This is a generator that gives stream to image processors
+        while not scv.done:
+            with scv.lock:
+                if scv.pool:
+                    processor = pool.pop()
+                else:
+                    processor = None
+            if processor:
+                yield processor.stream
+                processor.event.set()
+            else:
+                # Pool is starved, wait for it to refill
+                time.sleep(0.1)
+
     def on_connect(self):
         info("received connection")
         # self._connected = True
+        # self.loopstop.clear()
+        self.done = False
         self.loopthd.start()
 
     def on_disconnect(self):
         warn("connection lost")
         # self._connected = False
+        self.done = True
         self.loopstop.set()
         self.exposed_stopVideoStream()
+
+        # Shut down the processors orderly
+        while self.pool:
+            with self.lock:
+                processor = self.pool.pop()
+            processor.terminated = True
+            # Suspicious join method
+            # processor.join()
 
     def exposed_recognized(self):
         return True
@@ -519,7 +593,7 @@ class MobotService(rpyc.Service):
 
     def update(self):
         # Capture frame and determine gesture
-        self.alphacv()
+        # self.alphacv() # Removed: Image Processing doesnt happen here anymore
 
         self.touchcount = abs(self.touchcount - 1)
         BrickPi.MotorSpeed[L] = self.vL
@@ -544,10 +618,16 @@ class MobotService(rpyc.Service):
         self._updateStatus()
 
     def mainloop(self, stop_event):
+        """
         while not stop_event.is_set():
             self.update()
             # Refresh period
-            stop_event.wait(0.05)
+            stop_event.wait(0.05)]
+        """
+        BUFFERSIZE = 4
+        self.pool = [ImageProcessor(self) for i in xrange(BUFFERSIZE)]
+        CAMERA.capture_sequence(MobotService.yieldstreams(self),
+            use_video_port=True)
 
 if __name__ == "__main__":
     init("initiating mobot server")
