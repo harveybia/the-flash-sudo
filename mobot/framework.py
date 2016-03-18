@@ -364,6 +364,48 @@ def startVideoStream_H264(port, stop_event):
         connection.close()
         server_socket.close()
 
+class ImageProcessor(threading.Thread):
+    # An image processor class that does the processing upon frame ready
+    def __init__(self, master):
+        super(ImageProcessor, self).__init__()
+        self.master = master
+        self.stream = io.BytesIO()
+        self.event = threading.Event()
+        self.terminated = False
+        self.start()
+
+    @profile
+    def betacv(self, img):
+        # Do the image processing
+        pass
+
+    def run(self):
+        # Runs as separate thread
+        # If you want to terminate the stream generator set
+        # self.master.done = True
+        while not self.terminated:
+            if self.event.wait(1):
+                try:
+                    self.stream.seek(0)
+                    # Do the image processing
+                    img = data = np.fromstring(self.stream.getvalue(),
+                        dtype=np.uint8)
+                    self.betacv(img)
+
+                    # Control the robot
+                    # self.vL = ???
+                    # self.vR = ???
+                except:
+                    warn("image processor exception, frame skipped")
+                finally:
+                    # Reset the stream and event
+                    self.stream.seek(0)
+                    self.stream.truncate()
+                    self.event.clear()
+                    # Return to pool for next frame
+                    with self.master.lock:
+                        self.master.pool.append(self)
+
 class MobotService(rpyc.Service):
     def __init__(self, *args, **kwargs):
         rpyc.Service.__init__(self, *args, **kwargs)
@@ -419,48 +461,6 @@ class MobotService(rpyc.Service):
         self.done = False # stops Image Processor
         self.lock = threading.Lock()
         self.pool = [] # Pool of Image Processors
-
-    class ImageProcessor(threading.Thread):
-        # An image processor class that does the processing upon frame ready
-        def __init__(self, master):
-            super(ImageProcessor, self).__init__()
-            self.master = master
-            self.stream = io.BytesIO()
-            self.event = threading.Event()
-            self.terminated = False
-            self.start()
-
-        @profile
-        def betacv(self, img):
-            # Do the image processing
-            pass
-
-        def run(self):
-            # Runs as separate thread
-            # If you want to terminate the stream generator set
-            # self.master.done = True
-            while not self.terminated:
-                if self.event.wait(1):
-                    try:
-                        self.stream.seek(0)
-                        # Do the image processing
-                        img = data = np.fromstring(self.stream.getvalue(),
-                            dtype=np.uint8)
-                        self.betacv(img)
-
-                        # Control the robot
-                        # self.vL = ???
-                        # self.vR = ???
-                    except:
-                        warn("image processor exception, frame skipped")
-                    finally:
-                        # Reset the stream and event
-                        self.stream.seek(0)
-                        self.stream.truncate()
-                        self.event.clear()
-                        # Return to pool for next frame
-                        with self.master.lock:
-                            self.master.pool.append(self)
 
     @staticmethod
     def yieldstreams(scv):
