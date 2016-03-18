@@ -376,8 +376,28 @@ class ImageProcessor(threading.Thread):
 
     @profile
     def betacv(self, img):
+        master = self.master
+        BLUR_FACTOR = master.values['BLUR']
+        TRACK_PT_NUM = master.values['PTS']
+        RADIUS = master.values['RADI']
+        ALPHA = master.values['A']
+        BETA = master.values['B']
+        GAMMA = 1 - ALPHA - BETA
+        THRESHOLD = master.values['THRS']
+        SAMPLESIZE = master.values['SIZE']
+        CERTAINTY = master.values['CERT']
         # Do the image processing
-        pass
+        # Generate grayscale image
+        grayimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # Blur image
+        blurred = findBlurred(grayimg, BLUR_FACTOR)
+        # Find tracking points
+        master.trackingpts = samplePoints(blurred, _isPotentialTrackingPoint,
+            n=TRACK_PT_NUM, radius=RADIUS, a=ALPHA, b=BETA, c=GAMMA,
+            threshold=THRESHOLD, samplesize=SAMPLESIZE, certainty=CERTAINTY)
+
+        info(str(master.trackingpts))
 
     def run(self):
         # Runs as separate thread
@@ -468,7 +488,7 @@ class MobotService(rpyc.Service):
         while not scv.done:
             with scv.lock:
                 if scv.pool:
-                    processor = pool.pop()
+                    processor = scv.pool.pop()
                 else:
                     processor = None
             if processor:
