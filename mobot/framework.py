@@ -525,7 +525,7 @@ class MobotService(rpyc.Service):
             # processor.join()
 
     def exposed_recognized(self):
-        return False if self._connected else True
+        return True
 
     def exposed_getMobotStatus(self):
         # Returning the weak reference to states dict

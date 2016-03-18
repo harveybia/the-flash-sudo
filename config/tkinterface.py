@@ -193,6 +193,7 @@ class InterfaceService(rpyc.Service):
         # if self.conn != None and not self._updated:
         #     self.trackingpts = self.conn.root.getTrackingPts()
         #     self._updated = True
+        print self.trackingpts
         return self.trackingpts
 
     def exposed_resetStatus(self):

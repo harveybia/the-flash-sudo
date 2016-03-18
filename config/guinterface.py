@@ -509,10 +509,10 @@ class Interface(Application):
         canvas.create_image(70,140,anchor=NW,image=self.image)
 
         # print self.conn.root.getTrackingPts()
-        # for pt in self.conn.root.getTrackingPts():
-        #     x = pt[0] + 70
-        #     y = pt[1] + 140
-        #     self.drawPtStatistics(canvas, (x, y))
+        for pt in self.conn.root.getTrackingPts():
+            x = pt[0] + 70
+            y = pt[1] + 140
+            self.drawPtStatistics(canvas, (x, y))
 
     def drawButtons(self, canvas):
         ####################
