@@ -204,9 +204,8 @@ def _getPointsAroundPoint(pt, radius, basis, step=30):
     # list: collection of points in disk
     res = []
     x, y = pt[0], pt[1]
-    for i in xrange(-step/2, step/2):
-        theta0 = math.atan2(basis[1], basis[0])
-        theta = theta0 + math.pi / step * i
+    for i in xrange(0, step):
+        theta = 2 * math.pi / step * i
         res.append( (int(x + radius * math.cos(theta)),
             int(y + radius * math.sin(theta))) )
     return res
@@ -442,7 +441,7 @@ class MobotService(rpyc.Service):
 
         self.values = {
             'BRIG': 0, 'CNST': 50, 'BLUR': 4,
-            'THRS': 150, 'SIZE': 3, 'CERT': 0.7, 'PTS': 3, 'RADI': 6,
+            'THRS': 150, 'SIZE': 3, 'CERT': 0.7, 'PTS': 4, 'RADI': 6,
                 'A': 0.6, 'B': 0.3, 'C': 0.1,
             'TCHS': 0.5, 'GATG': 14, 'MAXS': 100
         }
