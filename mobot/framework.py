@@ -22,6 +22,7 @@ import socket
 import picamera
 import threading
 import numpy as np
+from PIL import Image
 from BrickPi import *
 from rpyc.utils.server import ThreadedServer
 from utils import init, info, warn
@@ -408,8 +409,12 @@ class ImageProcessor(threading.Thread):
                 try:
                     self.stream.seek(0)
                     # Do the image processing
-                    img = data = np.fromstring(self.stream.getvalue(),
-                        dtype=np.uint8)
+                    img = Image.open(self.stream).convert('RGB')
+                    img = np.array(img)
+                    img = img[:, :, ::-1].copy()
+
+                    # img = data = np.fromstring(self.stream.getvalue(),
+                    #     dtype=np.uint8)
                     self.betacv(img)
 
                     # Control the robot
