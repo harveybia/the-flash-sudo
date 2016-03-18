@@ -62,6 +62,7 @@ V_WIDTH, V_HEIGHT = 320, 240
 FRAMERATE = 5
 
 # Service configuration
+LOCAL_ADDR = socket.getfqdn()
 MOBOT_PORT = 15112
 
 # Global Constants:
@@ -450,7 +451,7 @@ class MobotService(rpyc.Service):
         self.status = {
             'STAT': STAT_ONLINE, 'ACTT': 0, 'MIST': 0, 'DELY': 0,
             'GATC': 0, 'SPED': 0, 'PROT': 0, 'CVST': STAT_ONLINE,
-            'BATT': 100, 'ADDR': socket.gethostname()
+            'BATT': 100, 'ADDR': LOCAL_ADDR
         }
 
         self.trackingpts = []
@@ -558,7 +559,12 @@ class MobotService(rpyc.Service):
 
     def _updateStatus(self):
         # Polls device information and updates status dict
+        self.status['STAT'] = STAT_ONLINE
         self.status['ACTT'] = int(time.time() - self.uptime)
+        self.status['MIST'] = 0
+        self.status['DELY'] = 100
+        self.status['CVST'] = STAT_ONLINE
+        self.status['BATT'] = 99
         self.status['SPED'] = self._calcMobotSpeed()
 
     def _setMotorSpeed(self, l, r):

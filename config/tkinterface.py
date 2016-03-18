@@ -83,7 +83,7 @@ class InterfaceService(rpyc.Service):
 
         self.values = {
             'BRIG': 0, 'CNST': 50, 'BLUR': 4,
-            'THRS': 150, 'SIZE': 4, 'CERT': 0.7, 'PTS': 5, 'RADI': 6,
+            'THRS': 150, 'SIZE': 4, 'CERT': 0.7, 'PTS': 5, 'RADI': 10,
                 'A': 0.6, 'B': 0.3, 'C': 0.1,
             'TCHS': 0.5, 'GATG': 14, 'MAXS': 100
         }
@@ -133,25 +133,37 @@ class InterfaceService(rpyc.Service):
     def on_connect(self):
         speaklog("connection established")
         self.exposed_connectToMobot()
+        self.updatethd.start()
 
     def on_disconnect(self):
         speaklog("connection lost")
         self.conn = None
+        self.updatestop.set()
         self.exposed_disconnectFromMobot()
+        self.updatestop.clear()
 
     def updateInfo(self, stop_event):
         while not stop_event.is_set():
-            time.sleep(0.2)
-            # Update info with 0.2 seconds interval
-            pass # We are not so desperate to use it
+            if self.conn == None: return
+            statnow = self.conn.root.getMobotStatus()
+            # valnow = self.conn.root.getMobotValues()
+            pts = self.conn.root.getTrackingPts()
+            for key in self.status:
+                self.status[key] = statnow[key]
+
+            # for key in self.values:
+                # valnow[key] = self.values[key]
+
+            del self.trackingpts[:]
+            for pt in pts:
+                self.trackingpts.append(pt)
+            time.sleep(0.1)
 
     def exposed_connectToMobot(self, addr=MOBOT_ADDR, port=MOBOT_PORT):
         try:
             self.conn = rpyc.connect(addr, port)
             if self.conn.root.recognized():
                 speaklog("connected to mobot, syncing data")
-                self.status = self.conn.root.getMobotStatus()
-                self.trackingpts = self.conn.root.getTrackingPts()
                 return 0
             else:
                 speaklog("connection refused")
@@ -170,11 +182,11 @@ class InterfaceService(rpyc.Service):
         }
         self.values = {
             'BRIG': 0, 'CNST': 50, 'BLUR': 4,
-            'THRS': 150, 'SIZE': 4, 'CERT': 0.7, 'PTS': 5, 'RADI': 6,
+            'THRS': 150, 'SIZE': 4, 'CERT': 0.7, 'PTS': 5, 'RADI': 10,
                 'A': 0.6, 'B': 0.3, 'C': 0.1,
             'TCHS': 0.5, 'GATG': 14, 'MAXS': 100
         }
-        self.trackingpts = []
+        del self.trackingpts[:]
 
     def exposed_startStream(self, addr, port):
         return # TODO: this method is slow and consumes bandwidth
@@ -193,7 +205,6 @@ class InterfaceService(rpyc.Service):
         # if self.conn != None and not self._updated:
         #     self.trackingpts = self.conn.root.getTrackingPts()
         #     self._updated = True
-        print self.trackingpts
         return self.trackingpts
 
     def exposed_resetStatus(self):

@@ -489,7 +489,7 @@ class Interface(Application):
         canvas.create_text((pt[0]+5, pt[1]), anchor='w', text="%d%%"%prob,
             font=("Airborne", 10), fill='aquamarine')
         canvas.create_line(pt[0], pt[1], pt[0]+basis[0], pt[1]+basis[1],
-            fill="red", width=1, arrow=tk.LAST)
+            fill="red", width=1, arrow=LAST)
 
     def drawVideo(self, canvas):
         canvas.create_text(30, 90, anchor=NW, text="LIVE FEED",
