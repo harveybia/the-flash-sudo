@@ -151,7 +151,6 @@ class InterfaceService(rpyc.Service):
                 pts = self.conn.root.getTrackingPts()
                 for key in self.status:
                     self.status[key] = statnow[key]
-                print statnow
 
                 # for key in self.values:
                     # valnow[key] = self.values[key]
