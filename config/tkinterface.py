@@ -144,19 +144,23 @@ class InterfaceService(rpyc.Service):
 
     def updateInfo(self, stop_event):
         while not stop_event.is_set():
-            if self.conn == None: return
-            statnow = self.conn.root.getMobotStatus()
-            # valnow = self.conn.root.getMobotValues()
-            pts = self.conn.root.getTrackingPts()
-            for key in self.status:
-                self.status[key] = statnow[key]
+            try:
+                if self.conn == None: return
+                statnow = self.conn.root.getMobotStatus()
+                # valnow = self.conn.root.getMobotValues()
+                pts = self.conn.root.getTrackingPts()
+                for key in self.status:
+                    self.status[key] = statnow[key]
+                print statnow
 
-            # for key in self.values:
-                # valnow[key] = self.values[key]
+                # for key in self.values:
+                    # valnow[key] = self.values[key]
 
-            del self.trackingpts[:]
-            for pt in pts:
-                self.trackingpts.append(pt)
+                del self.trackingpts[:]
+                for pt in pts:
+                    self.trackingpts.append(pt)
+            except:
+                warn("info update failed")
             time.sleep(0.1)
 
     def exposed_connectToMobot(self, addr=MOBOT_ADDR, port=MOBOT_PORT):

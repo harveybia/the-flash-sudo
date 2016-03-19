@@ -463,11 +463,16 @@ class MobotService(rpyc.Service):
 
         self.touchcount = 0
 
-        # Main EV3 control thread
+        # Main EV3 control threads
         self.loopstop = threading.Event()
         self.loopthd = threading.Thread(target=self.mainloop,
             args=(self.loopstop,))
         self.loopthd.daemon = True
+
+        self.hardwarestop = threading.Event()
+        self.hardwarethd = threading.Thread(target=self.update,
+            args=(self.hardwarestop,))
+        self.hardwarethd.daemon = True
 
         # Remote video streaming therad
         self.videostop = threading.Event()
@@ -507,14 +512,17 @@ class MobotService(rpyc.Service):
         info("received connection")
         self._connected = True
         self.loopstop.clear()
+        self.hardwarestop.clear()
         self.done = False
         self.loopthd.start()
+        self.hardwarethd.start()
 
     def on_disconnect(self):
         warn("connection lost")
         self._connected = False
         self.done = True
         self.loopstop.set()
+        self.hardwarestop.set()
         self.exposed_stopVideoStream()
 
         # Shut down the processors orderly
@@ -584,31 +592,30 @@ class MobotService(rpyc.Service):
         r = r * (maxspeed / 255.0)
         self._setMotorSpeed(l, r)
 
-    def update(self):
-        # Capture frame and determine gesture
+    def update(self, stop_event):
+        # Mobot hardware update loop
         # self.alphacv() # Removed: Image Processing doesnt happen here anymore
-
-        self.touchcount = abs(self.touchcount - 1)
-        BrickPi.MotorSpeed[L] = self.vL
-        BrickPi.MotorSpeed[R] = self.vR
-        result = BrickPiUpdateValues()
-        if not result:
-            # Successfully updated values
-            # Read touch sensor values
-            if BrickPi.Sensor[S2]:
-                # Prevent signal disturbances
-                threshold = int(28 - self.values['TCHS'] * 20)
-                self.touchcount += 2
-                if self.touchcount > threshold:
-                    # Increment gates count
-                    self.status['GATC'] += 1
-                    # Reset signal strength
-                    self.touchcount = 0
-            # Update encoder values
-            self.encL = BrickPi.Encoder[L]
-            self.encR = BrickPi.Encoder[R]
-
-        self._updateStatus()
+        while not stop_event.is_set():
+            self.touchcount = abs(self.touchcount - 1)
+            BrickPi.MotorSpeed[L] = self.vL
+            BrickPi.MotorSpeed[R] = self.vR
+            result = BrickPiUpdateValues()
+            if not result:
+                # Successfully updated values
+                # Read touch sensor values
+                if BrickPi.Sensor[S2]:
+                    # Prevent signal disturbances
+                    threshold = int(28 - self.values['TCHS'] * 20)
+                    self.touchcount += 2
+                    if self.touchcount > threshold:
+                        # Increment gates count
+                        self.status['GATC'] += 1
+                        # Reset signal strength
+                        self.touchcount = 0
+                # Update encoder values
+                self.encL = BrickPi.Encoder[L]
+                self.encR = BrickPi.Encoder[R]
+            self._updateStatus()
 
     def mainloop(self, stop_event):
         BUFFERSIZE = 4
