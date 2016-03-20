@@ -25,7 +25,7 @@ import numpy as np
 from PIL import Image
 from BrickPi import *
 from rpyc.utils.server import ThreadedServer
-from utils import init, info, warn
+from utils import init, info, warn, term2
 
 # Reference: BrickPi_Python/Sensor_Examples/*.py
 # Reference: http://picamera.readthedocs.org/en/release-1.10/recipes1.html
@@ -613,6 +613,13 @@ class MobotService(rpyc.Service):
                 self.encL = BrickPi.Encoder[L]
                 self.encR = BrickPi.Encoder[R]
             self._updateStatus()
+
+            # Update Terminal Feedback
+            c = term2.scr.getch()
+            if c == 410:
+                info("@terminal: resize event")
+                term2.resizeAll()
+            term2.refreshAll()
 
     def mainloop(self, stop_event):
         BUFFERSIZE = 4

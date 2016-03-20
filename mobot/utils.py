@@ -1,7 +1,6 @@
 import time
 import termui
 import atexit
-import threading
 import subprocess
 from easyterm import TerminalController
 
@@ -39,20 +38,19 @@ try:
 except:
     speak = null
 
-termthd = None
+term2 = None
 # Test if platform supports curses
 try:
     # User interaction thread
-    advancedterm = termui.TerminalApplication()
-    termthd = threading.Thread(target=advancedterm.mainloop)
-    init = advancedterm.init
-    info = advancedterm.info
-    warn = advancedterm.warn
-    termthd.start()
-    termthd.daemon = True
+    term2 = termui.TerminalApplication()
+
+    init = term2.init
+    info = term2.info
+    warn = term2.warn
+
     @atexit.register
     def cleanup():
-        advancedterm.terminate()
+        term2.terminate()
 except:
     warn("your terminal does not support curses, falling back to normal mode")
 
