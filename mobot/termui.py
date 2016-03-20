@@ -13,7 +13,7 @@ class TerminalApplication():
         self.size = self.scr.getmaxyx() # (row, col)
         curses.noecho()
         curses.cbreak()
-        self.scr.nodelay(1)
+        # self.scr.nodelay(1)
         self.scr.keypad(1)
         self.scr.border(0)
         self.createMenuBar()
