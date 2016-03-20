@@ -94,10 +94,12 @@ class TerminalApplication():
         while len(self.logentries) > last_row - first_row - 1:
             self.logentries.pop(0)
         self.logentries.append((typ, text, time.ctime()[11:19]))
+        self.refreshAll()
 
     def updateState(self, states):
         pass
 
+    """
     def mainloop(self):
         while 1:
             c = self.scr.getch()
@@ -105,6 +107,7 @@ class TerminalApplication():
                 self.info("resized")
                 self.resizeAll()
             self.refreshAll()
+    """
 
     def terminate(self):
         curses.nocbreak()

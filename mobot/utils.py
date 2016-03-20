@@ -1,6 +1,5 @@
 import time
 import termui
-import threading
 import subprocess
 from easyterm import TerminalController
 
@@ -43,15 +42,11 @@ termthd = None
 try:
     # User interaction thread
     advancedterm = termui.TerminalApplication()
-    termthd = threading.Thread(target=advancedterm.mainloop)
     init = advancedterm.init
     info = advancedterm.info
     warn = advancedterm.warn
 except:
     warn("your terminal doos not support curses, falling back to normal mode")
-
-termthd.start()
-termthd.daemon = True
 
 if __name__ == "__main__":
     speak("Hello world!")
