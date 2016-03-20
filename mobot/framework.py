@@ -541,8 +541,9 @@ class MobotService(rpyc.Service):
     def exposed_recognized(self):
         return True
 
-    def exposed_getFilterState(self):
-        return self.filterstate
+    def exposed_setFilterState(self, state):
+        assert(type(state) is int)
+        self.filterstate = state
 
     def exposed_getMobotStatus(self):
         # Returning the weak reference to states dict

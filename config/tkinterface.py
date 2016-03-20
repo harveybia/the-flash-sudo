@@ -152,7 +152,7 @@ class InterfaceService(rpyc.Service):
                 for key in self.status:
                     self.status[key] = statnow[key]
 
-                self.conn.root.filterstate = self.filterstate
+                self.conn.root.setFilterState(self.filterstate)
 
                 # for key in self.values:
                     # valnow[key] = self.values[key]
