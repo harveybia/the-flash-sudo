@@ -40,7 +40,7 @@ except:
 
 term2 = None
 # Comment this part out to enter stable mode
-"""
+
 # Test if platform supports curses
 try:
     # User interaction thread
@@ -55,7 +55,7 @@ try:
         term2.terminate()
 except:
     warn("your terminal does not support curses, falling back to normal mode")
-"""
+
 
 if __name__ == "__main__":
     speak("Hello world!")

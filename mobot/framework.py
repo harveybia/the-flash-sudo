@@ -109,7 +109,7 @@ def profile(fn):
         start_time = time.time()
         ret = fn(*args, **kwargs)
         elapsed_time = time.time() - start_time
-        info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
+        #info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
         return ret
     return with_profiling
 
@@ -397,7 +397,7 @@ class ImageProcessor(threading.Thread):
             n=TRACK_PT_NUM, radius=RADIUS, a=ALPHA, b=BETA, c=GAMMA,
             threshold=THRESHOLD, samplesize=SAMPLESIZE, certainty=CERTAINTY)
 
-        info(str(master.trackingpts))
+        # info(str(master.trackingpts))
 
     def run(self):
         # Runs as separate thread
