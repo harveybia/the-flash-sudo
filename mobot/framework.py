@@ -412,6 +412,10 @@ class ImageProcessor(threading.Thread):
                     img = np.array(img)
                     img = img[:, :, ::-1].copy()
 
+                    if self.master.filterstate == 3:
+                        # IRNV: invert color
+                        img = cv2.bitwise_not(img)
+
                     # img = data = np.fromstring(self.stream.getvalue(),
                     #     dtype=np.uint8)
                     self.betacv(img)
@@ -439,6 +443,8 @@ class MobotService(rpyc.Service):
         self.uptime = time.time()
         self.missionuptime = time.time()
         self._connected = False
+
+        self.filterstate = 0
 
         self.values = {
             'BRIG': 0, 'CNST': 50, 'BLUR': 4,
@@ -534,6 +540,9 @@ class MobotService(rpyc.Service):
 
     def exposed_recognized(self):
         return True
+
+    def exposed_getFilterState(self):
+        return self.filterstate
 
     def exposed_getMobotStatus(self):
         # Returning the weak reference to states dict

@@ -152,6 +152,8 @@ class InterfaceService(rpyc.Service):
                 for key in self.status:
                     self.status[key] = statnow[key]
 
+                self.conn.root.filterstate = self.filterstate
+
                 # for key in self.values:
                     # valnow[key] = self.values[key]
 
@@ -159,7 +161,7 @@ class InterfaceService(rpyc.Service):
                 for pt in pts:
                     self.trackingpts.append(pt)
             except:
-                warn("info update failed")
+                warn("sync failed")
             time.sleep(0.1)
 
     def exposed_connectToMobot(self, addr=MOBOT_ADDR, port=MOBOT_PORT):
