@@ -43,10 +43,6 @@ class TerminalApplication():
 
     def refreshAll(self):
         self.scr.erase()
-
-        self.scr.border(0)
-        self.createMenuBar()
-
         self.loggerPad.erase()
         self.loggerPad.border(0, 0, 1)
 
@@ -70,6 +66,8 @@ class TerminalApplication():
 
         self.loggerPad.refresh()
         self.statusPad.refresh()
+        self.scr.border(0)
+        self.createMenuBar()
 
     def resizeAll(self):
         self.size = self.scr.getmaxyx()

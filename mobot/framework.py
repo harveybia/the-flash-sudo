@@ -27,6 +27,8 @@ from BrickPi import *
 from rpyc.utils.server import ThreadedServer
 from utils import init, info, warn, term2
 
+STABLE_MODE = True
+
 # Reference: BrickPi_Python/Sensor_Examples/*.py
 # Reference: http://picamera.readthedocs.org/en/release-1.10/recipes1.html
 
@@ -615,7 +617,7 @@ class MobotService(rpyc.Service):
             self._updateStatus()
 
             # Update Terminal Feedback
-            if term2 != None:
+            if term2 != None and not STABLE_MODE:
                 c = term2.scr.getch()
                 if c == 410:
                     info("@terminal: resize event")
