@@ -1,5 +1,6 @@
 import time
 import curses
+import atexit
 
 class TerminalApplication():
     def __init__(self):
@@ -35,9 +36,6 @@ class TerminalApplication():
         self.scr.addstr(self.row_b_log, 5, "Mobot Status Viewer")
 
         self.refreshAll()
-
-    def __del__(self):
-        self.terminate()
 
     def createMenuBar(self):
         self.scr.addstr(0, 1, " " * (self.size[1] - 2), curses.A_REVERSE)
@@ -112,6 +110,7 @@ class TerminalApplication():
             self.refreshAll()
     """
 
+    @atexit.register
     def terminate(self):
         curses.nocbreak()
         self.scr.keypad(1)

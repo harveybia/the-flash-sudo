@@ -18,7 +18,7 @@ import rpyc
 import socket
 import threading
 import Tkinter as tk
-from utils import speak, speaklog, info
+from utils import speak, speaklog, info, warn, init
 from rpyc.utils.server import ThreadedServer
 
 # This interface is half-hardcoded, for the sake of simplicity
