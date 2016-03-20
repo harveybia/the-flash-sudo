@@ -99,15 +99,13 @@ class TerminalApplication():
     def updateState(self, states):
         pass
 
-    """
     def mainloop(self):
         while 1:
             c = self.scr.getch()
             if c == curses.KEY_RESIZE:
-                self.info("resized")
+                self.info("@terminal: resize event")
                 self.resizeAll()
             self.refreshAll()
-    """
 
     def terminate(self):
         curses.nocbreak()

@@ -1,6 +1,7 @@
 import time
 import termui
 import atexit
+import threading
 import subprocess
 from easyterm import TerminalController
 
@@ -43,9 +44,12 @@ termthd = None
 try:
     # User interaction thread
     advancedterm = termui.TerminalApplication()
+    termthd = threading.Thread(target=advancedterm.mainloop)
     init = advancedterm.init
     info = advancedterm.info
     warn = advancedterm.warn
+    termthd.start()
+    termthd.daemon = True
     @atexit.register
     def cleanup():
         advancedterm.terminate()
