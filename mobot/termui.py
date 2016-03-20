@@ -36,6 +36,9 @@ class TerminalApplication():
 
         self.refreshAll()
 
+    def __del__(self):
+        self.terminate()
+
     def createMenuBar(self):
         self.scr.addstr(0, 1, " " * (self.size[1] - 2), curses.A_REVERSE)
         self.scr.addstr(0, 2, "Mobot Terminal Monitor v1.0 alpha",
