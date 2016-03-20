@@ -615,7 +615,7 @@ class MobotService(rpyc.Service):
             self._updateStatus()
 
             # Update Terminal Feedback
-            if term2 != None"
+            if term2 != None
                 c = term2.scr.getch()
                 if c == 410:
                     info("@terminal: resize event")
