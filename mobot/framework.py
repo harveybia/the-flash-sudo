@@ -615,11 +615,12 @@ class MobotService(rpyc.Service):
             self._updateStatus()
 
             # Update Terminal Feedback
-            c = term2.scr.getch()
-            if c == 410:
-                info("@terminal: resize event")
-                term2.resizeAll()
-            term2.refreshAll()
+            if term2 != None"
+                c = term2.scr.getch()
+                if c == 410:
+                    info("@terminal: resize event")
+                    term2.resizeAll()
+                term2.refreshAll()
 
     def mainloop(self, stop_event):
         BUFFERSIZE = 4
