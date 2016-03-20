@@ -38,6 +38,7 @@ try:
 except:
     speak = null
 
+termthd = None
 # Test if platform supports curses
 try:
     # User interaction thread
@@ -46,10 +47,11 @@ try:
     init = advancedterm.init
     info = advancedterm.info
     warn = advancedterm.warn
-    termthd.start()
-    termthd.daemon = True
 except:
     warn("your terminal doos not support curses, falling back to normal mode")
+
+termthd.start()
+termthd.daemon = True
 
 if __name__ == "__main__":
     speak("Hello world!")
