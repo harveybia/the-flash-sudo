@@ -107,7 +107,7 @@ def profile(fn):
         start_time = time.time()
         ret = fn(*args, **kwargs)
         elapsed_time = time.time() - start_time
-        print "Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time)
+        info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
         return ret
     return with_profiling
 
@@ -275,8 +275,6 @@ def samplePoints(grayimg, isTrackingPt,
             # Update basis
             basis[0] = points[-1][0] - points[-2][0]
             basis[1] = points[-1][1] - points[-2][1]
-            # print best
-            # print basis
     return points
 
 @profile
@@ -307,7 +305,7 @@ def sampleContourArray(img, interval=12, injective=False):
     P = sorted(P)
 
     n = len(P)
-    print "points found: %d"%len(P)
+    # print "points found: %d"%len(P)
     # n = len(P) - 1
     n = n - 1
     # Degree of curve
@@ -335,12 +333,11 @@ def calculateDesiredVelocityVector():
 def debugConnection(sock, addr, port):
     # Prints the details of a connection
     warn("connection timed out, plesae check listener status")
-    print "detailed Report:"
-    print term.render("${RED}IP_ADDR: ${GREEN}%s${NORMAL}"%addr)
-    print term.render("${RED}PORT: : ${GREEN}%d${NORMAL}"%port)
+    info("detailed Report:")
+    info("IP_ADDR: "%addr)
+    info("PORT: "%port)
     if not sock.gettimeout(): return
-    print term.render("${RED}connection timed out after %.3f seconds \
-        ${NORMAL}" %sock.gettimeout())
+    info("connection timed out after %.3f seconds"%sock.gettimeout())
 
 def startVideoStream_H264(port, stop_event):
     info("setting up streaming socket")

@@ -1,5 +1,6 @@
 import time
 import termui
+import atexit
 import subprocess
 from easyterm import TerminalController
 
@@ -45,8 +46,11 @@ try:
     init = advancedterm.init
     info = advancedterm.info
     warn = advancedterm.warn
+    @atexit.register
+    def cleanup():
+        advancedterm.terminate()
 except:
-    warn("your terminal doos not support curses, falling back to normal mode")
+    warn("your terminal does not support curses, falling back to normal mode")
 
 if __name__ == "__main__":
     speak("Hello world!")

@@ -1,6 +1,5 @@
 import time
 import curses
-import atexit
 
 class TerminalApplication():
     def __init__(self):
@@ -110,7 +109,6 @@ class TerminalApplication():
             self.refreshAll()
     """
 
-    @atexit.register
     def terminate(self):
         curses.nocbreak()
         self.scr.keypad(1)
