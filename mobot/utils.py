@@ -1,5 +1,7 @@
-import subprocess
 import time
+import termui
+import threading
+import subprocess
 from easyterm import TerminalController
 
 term = TerminalController()
@@ -35,6 +37,19 @@ try:
     speak("")
 except:
     speak = null
+
+# Test if platform supports curses
+try:
+    # User interaction thread
+    advancedterm = termui.TerminalApplication()
+    termthd = threading.Thread(target=advancedterm.mainloop)
+    init = advancedterm.init
+    info = advancedterm.info
+    warn = advancedterm.warn
+    termthd.start()
+    termthd.daemon = True
+except:
+    warn("your terminal doos not support curses, falling back to normal mode")
 
 if __name__ == "__main__":
     speak("Hello world!")

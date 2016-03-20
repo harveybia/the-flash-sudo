@@ -101,12 +101,7 @@ class TerminalApplication():
     def mainloop(self):
         while 1:
             c = self.scr.getch()
-            if c == ord('q'):
-                self.terminate()
-                break
-            elif c == ord('a'):
-                self.info("key a pressed")
-            elif c == curses.KEY_RESIZE:
+            if c == curses.KEY_RESIZE:
                 self.info("resized")
                 self.resizeAll()
             self.refreshAll()
@@ -117,6 +112,7 @@ class TerminalApplication():
         curses.echo()
         curses.endwin()
 
-app = TerminalApplication()
-app.scr.getch()
-app.mainloop()
+if __name__ == "__main__":
+    app = TerminalApplication()
+    app.scr.getch()
+    app.mainloop()
