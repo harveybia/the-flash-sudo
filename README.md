@@ -6,9 +6,7 @@ Core Algorithm Version
 ## Team Members
 Harvey Shi,
 Elias Lu,
-Matthew Zhao,
-Steven Yang,
-Stefen Zhu
+Matthew Zhao
 
 ## Installation Instructions
 Make sure you have the correct paths in your environment.

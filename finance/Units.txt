@@ -1,18 +1,43 @@
-ITEM                         : $USD        : SUBMITTED BY
-==========================================================
-DATE: Feb 1 2016------------------------------------------
-High speed memory card       : 4.95        : HARVEY SHI
-Raspberry Pi 2 model B       : 36.09       : HARVEY SHI
-Wireless Cable               : 9.99        : HARVEY SHI
-RPI Camera                   : 32.99       : HARVEY SHI
-----------------------------------------------------------
+============================================================
+|    PROJECT THE-FLASH-SUDO (HARVEY, ELIAS, MATTHEW)       |
+|                  STATEMENT OF COST                       |
+------------------------------------------------------------
+| ITEM                         : $ COST      : ACQUIRER    |
+|===========================================================
+|DATE: Feb 1 2016-------------------------------------------
+| High speed memory card       : 4.95        : HARVEY SHI  |
+| Raspberry Pi 2 model B       : 36.09       : HARVEY SHI  |
+| Wireless Cable               : 9.99        : HARVEY SHI  |
+| RPI Camera                   : 32.99       : HARVEY SHI  |
+|-----------------------------------------------------------
+| BALANCE                                    : 84.02       |
+|                                                          |
+|DATE: Mar 13 2016------------------------------------------
+| Raspberry Pi 3 model B Kit   : 79.99       : HARVEY SHI  |
+| Raspberry Pi 2 model B       : -36.09      : HARVEY SHI  |
+|-----------------------------------------------------------
+| BALANCE                                    : 127.92      |
+|                                                          |
+|DATE: Mar 16 2016------------------------------------------
+| Flex Cable for RasPi CAM     : 10.49       : HARVEY SHI  |
+|-----------------------------------------------------------
+| BALANCE                                    : 138.41      |
+|                                                          |
+|DATE: Mar 21 2016------------------------------------------
+| 9 Volt Batteries (8-Pack)*2  : 21.28       : ELIAS LU    |
+| Batteries Regulators*2       : 26.85       : ELIAS LU    |
+|-----------------------------------------------------------
+| BALANCE                                    : 186.54      |
+|===========================================================
 
-DATE: Mar 16 2016-----------------------------------------
-Flex CSI Cable for Raspi CAM : 10.49       : HARVEY SHI
-----------------------------------------------------------
 
-DATE: Mar 21 2016-----------------------------------------
-9 Volt Batteries (8-Pack)*2  : 21.28       : ELIAS LU
-Batteries Regulators*2       : 26.85       : ELIAS LU
-----------------------------------------------------------
-
+============================================================
+|     PROJECT THE-FLASH-SUDO (HARVEY, ELIAS, MATTHEW)      |
+|     ASSET OCCUPANCY STATEMENT (INTRODUCED CAPITAL)       |
+------------------------------------------------------------
+| ITEM                         : $ COST      : OWNER       |
+============================================================
+| LEGO Mindstorms EV3 45544    : 499.95      : ELIAS LU    |
+| LEGO Mindstorms EV3 45560    : 164.89      : ELIAS LU    |
+| LEGO Mindstorms EV3 45544    : 499.95      : HARVEY SHI  |
+============================================================
