@@ -57,7 +57,7 @@ def readTkImage(stream):
         resized = cv2.resize(frame, dsize=(V_WIDTH, V_HEIGHT))
         return _rgbToTkImage(cv2.cvtColor(resized, cv2.COLOR_BGR2RGB))
     else:
-        return Image(width=V_WIDTH, height=V_HEIGHT)
+        return ImageTk.PhotoImage('RGB', (V_WIDTH, V_HEIGHT))
 
 # turn int value to str #
 def interpretKeyValue(statusDic):

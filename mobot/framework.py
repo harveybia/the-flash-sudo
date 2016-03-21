@@ -668,7 +668,7 @@ class MobotService(rpyc.Service):
         lwheel = max(min(lwheel, 255), -255)
         rwheel = max(min(rwheel, 255), -255)
 
-        return (lwheel. rwheel)
+        return (lwheel, rwheel)
 
 if __name__ == "__main__":
     init("initiating mobot server")
