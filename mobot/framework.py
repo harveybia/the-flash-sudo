@@ -325,10 +325,8 @@ def sampleContourArray(img, interval=12, injective=False):
     return S
 
 @profile
-def calculateDesiredVelocityVector():
-    # Takes in a equation (set) and calculate desired velocity vector
-    # TODO: Integrate PID algorithm
-    pass
+def errorToOutput():
+    
 
 # ----------------------- END ------------------------
 
@@ -497,6 +495,14 @@ class MobotService(rpyc.Service):
         self.lock = threading.Lock()
         self.pool = [] # Pool of Image Processors
 
+        # PID Control Variable
+        self.basespeed = 100
+        self.errorsum = 0
+        self.preverr = 0
+        self.p = 1
+        self.i = 0
+        self.d = 0
+
     @staticmethod
     def yieldstreams(scv):
         # This is a generator that gives stream to image processors
@@ -624,6 +630,8 @@ class MobotService(rpyc.Service):
                 # Update encoder values
                 self.encL = BrickPi.Encoder[L]
                 self.encR = BrickPi.Encoder[R]
+
+            self.controlerror()
             self._updateStatus()
 
             # Update Terminal Feedback
@@ -639,6 +647,30 @@ class MobotService(rpyc.Service):
         self.pool = [ImageProcessor(self) for i in xrange(BUFFERSIZE)]
         CAMERA.capture_sequence(MobotService.yieldstreams(self),
             use_video_port=True)
+
+    def calculatemobotmovement(self):
+        # Error is the offset of the bottom trackpoint from middle of frame
+        err = self.trackingpts[0][0] - V_WIDTH / 2
+
+        # Proportion term
+        pterm = err * self.p
+        # Calculate the integral term
+        self.errorsum += err
+        iterm = self.errorsum * self.i
+        # Calculate the derivative term
+        dterm = (err - self.preverr) * self.d
+        self.preverr = err
+        # Drive is the difference in speed between two wheels
+        drive = pterm + iterm + dterm
+
+        lwheel = self.basespeed - drive / 2
+        rwheel = self.basespeed + drive / 2
+
+        # Cap the wheel speeds to [-255, 255]
+        lwheel = max(min(lwheel, 255), -255)
+        rwheel = max(min(rwheel, 255), -255)
+
+        self._setMotorSpeed(lwheel, rwheel)
 
 if __name__ == "__main__":
     init("initiating mobot server")
