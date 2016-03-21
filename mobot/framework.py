@@ -647,6 +647,7 @@ class MobotService(rpyc.Service):
 
     def calculateMobotMovement(self):
         # Error is the offset of the bottom trackpoint from middle of frame
+        if len(self.trackingpts) == 0: return (0, 0)
         err = self.trackingpts[0][0] - V_WIDTH / 2
 
         # Proportion term
