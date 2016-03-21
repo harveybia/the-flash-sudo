@@ -326,7 +326,7 @@ def sampleContourArray(img, interval=12, injective=False):
 
 @profile
 def errorToOutput():
-    
+
 
 # ----------------------- END ------------------------
 
@@ -631,7 +631,8 @@ class MobotService(rpyc.Service):
                 self.encL = BrickPi.Encoder[L]
                 self.encR = BrickPi.Encoder[R]
 
-            self.controlerror()
+            speeds = self.calculateMobotMovement()
+            self._setMotorSpeed(speeds[0], speeds[1])
             self._updateStatus()
 
             # Update Terminal Feedback
@@ -648,7 +649,7 @@ class MobotService(rpyc.Service):
         CAMERA.capture_sequence(MobotService.yieldstreams(self),
             use_video_port=True)
 
-    def calculatemobotmovement(self):
+    def calculateMobotMovement(self):
         # Error is the offset of the bottom trackpoint from middle of frame
         err = self.trackingpts[0][0] - V_WIDTH / 2
 
@@ -670,7 +671,7 @@ class MobotService(rpyc.Service):
         lwheel = max(min(lwheel, 255), -255)
         rwheel = max(min(rwheel, 255), -255)
 
-        self._setMotorSpeed(lwheel, rwheel)
+        return (lwheel. rwheel)
 
 if __name__ == "__main__":
     init("initiating mobot server")
