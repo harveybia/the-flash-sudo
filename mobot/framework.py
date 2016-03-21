@@ -324,10 +324,6 @@ def sampleContourArray(img, interval=12, injective=False):
     #print P
     return S
 
-@profile
-def errorToOutput():
-
-
 # ----------------------- END ------------------------
 
 def debugConnection(sock, addr, port):
