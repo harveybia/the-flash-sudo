@@ -249,7 +249,7 @@ def samplePoints(grayimg, isTrackingPt,
         if i == 0:
             # Base case, we want to find a starting pt to work with
             best = ((w/2, h - radius), 0.1)
-            for col in xrange(0, w, radius):
+            for col in xrange(0, w, radius // 2):
                 pt = (col, h - radius)
                 if isTrackingPt(grayimg, pt,
                     threshold, samplesize, certainty):
@@ -668,7 +668,7 @@ class MobotService(rpyc.Service):
         lwheel = max(min(lwheel, 255), -255)
         rwheel = max(min(rwheel, 255), -255)
 
-        return (lwheel, rwheel)
+        return (lwheel, rwheel
 
 if __name__ == "__main__":
     init("initiating mobot server")

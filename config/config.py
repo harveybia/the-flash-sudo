@@ -119,16 +119,15 @@ def isValidPt(img, x, y):
     h, w = img.shape[0], img.shape[1]
     return (0 <= x and x < w) and (0 <= y and y < h)
 
-def _isPotentialTrackingPoint(grayimg, pt):
+def _isPotentialTrackingPoint(grayimg, pt,
+    threshold=180, samplesize=4, certainty=0.7):
     # Using threshold value to identify whether it is a valid point
     # @param:
     # grayimg: (ndarray) the image with one channel: graysacle
     # pt: ([2D]tuple) the point to check
-
-    threshold = 180 # Example Value
-    samplesize = 4 # Look 4 units before and after each dimension
-                   # This implies that there are 9 * 9 = 81 validation points
-    certainty = 0.7 # Ratio of valid points within sample square
+    # threshold: (int) the threshold value in grayscale
+    # samplesize: (int) the size of sampling matrix
+    # certainty: (float) the saturation of valid points in matrix
 
     h, w = grayimg.shape[0], grayimg.shape[1]
     cx, cy = pt[0], pt[1] # Center coordinates
@@ -202,7 +201,8 @@ def _getPointsAroundPoint(pt, radius, step=200):
 
 @profile
 def samplePoints(grayimg, isTrackingPt,
-     n=5, radius=6, a=0.6, b=0.3, c=0.1):
+     n=5, radius=6, a=0.6, b=0.3, c=0.1,
+     threshold=180, samplesize=4, certainty=0.7):
     # @param:
     # grayimg: (nparray) the image we want to process, in grayscale
     # isTrackingPt: (grayimg, pt) -> bool
@@ -212,6 +212,9 @@ def samplePoints(grayimg, isTrackingPt,
     # a: (float) the preset probability of alpha region
     # b: (float) the preset probability of beta region
     # c: (float) the preset probability of gamma region
+    # threshold: (int) the threshold value in grayscale
+    # samplesize: (int) the size of sampling matrix
+    # certainty: (float) the saturation of valid points in matrix
 
     # Mathematically speaking, n * radius should be less than height of image
     # Test if parameters are valid:
@@ -226,13 +229,13 @@ def samplePoints(grayimg, isTrackingPt,
     points = []
 
     # Main loop driving the sampling process
-    basis = [0, -1]
+    basis = [0, 0 - radius]
     for i in xrange(n):
         # i: the index of tracking point
         if i == 0:
             # Base case, we want to find a starting pt to work with
             best = ((w/2, h - radius), 0.1)
-            for col in xrange(0, w):
+            for col in xrange(0, w, radius // 2):
                 pt = (col, h - radius)
                 if isTrackingPt(grayimg, pt):
                     p = _getTrackingPointProbability(grayimg, pt)
@@ -249,7 +252,8 @@ def samplePoints(grayimg, isTrackingPt,
             best = ((prevpt[0] + basis[0], prevpt[1] + basis[1]), 0.1)
             for pt in _getPointsAroundPoint(prevpt, radius):
                 x, y = pt[0], pt[1]
-                if isValidPt(grayimg, x, y) and isTrackingPt(grayimg, pt):
+                if isValidPt(grayimg, x, y) and isTrackingPt(grayimg, pt,
+                    threshold, samplesize, certainty):
                     p = _getNextTrackingPtProbability(grayimg, pt, prevpt,
                         basis, a, b, c)
                     if p > best[1]: best = (pt, p)
@@ -258,8 +262,6 @@ def samplePoints(grayimg, isTrackingPt,
             # Update basis
             basis[0] = points[-1][0] - points[-2][0]
             basis[1] = points[-1][1] - points[-2][1]
-            print best
-            print basis
     return points
 
 @profile
