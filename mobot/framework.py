@@ -37,7 +37,9 @@ BrickPiSetup()
 
 # Aliasing for ports for convenience
 L = PORT_B
+L1 = PORT_A
 R = PORT_C
+R2 = PORT_D
 S2 = PORT_4
 
 # Exceptions
@@ -609,7 +611,9 @@ class MobotService(rpyc.Service):
         while not stop_event.is_set():
             self.touchcount = abs(self.touchcount - 1)
             BrickPi.MotorSpeed[L] = self.vL
+            BrickPi.MotorSpeed[L1] = self.vL
             BrickPi.MotorSpeed[R] = self.vR
+            BrickPi.MotorSpeed[R1] = self.vR
             result = BrickPiUpdateValues()
             if not result:
                 # Successfully updated values

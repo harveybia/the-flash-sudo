@@ -28,7 +28,7 @@ from rpyc.utils.server import ThreadedServer
 
 # Connection Configuration
 # This is the address and port number of raspberry pi control server
-MOBOT_ADDR = "128.237.188.29"
+MOBOT_ADDR = "128.237.208.193"
 MOBOT_PORT = 15112
 BACKBONE_PORT = 15251
 VIDEO_PORT = 20000
