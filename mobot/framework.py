@@ -385,6 +385,9 @@ class ImageProcessor(threading.Thread):
         # Do the image processing
         # Generate grayscale image
         grayimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # Grayscale image is faster to fetch for client
+        # Update server frame
+        self.master.cntframe = grayimg
 
         # Blur image
         blurred = findBlurred(grayimg, BLUR_FACTOR)
@@ -455,6 +458,7 @@ class MobotService(rpyc.Service):
             'BATT': 100, 'ADDR': LOCAL_ADDR
         }
 
+        self.cntframe = np.zeros((V_WIDTH, V_HEIGHT))
         self.trackingpts = []
 
         self.vL = 0 # left speed
@@ -558,6 +562,10 @@ class MobotService(rpyc.Service):
         # Returning the weak reference to values dict
         # Changing the values in dict will directly affect local var
         return self.values
+    
+    def exposed_getCurrentFrame(self):
+        # Returns an ndarray in grayscale representing what the mobot is seeing
+        return self.cntframe
 
     def exposed_getTrackingPts(self):
         return self.trackingpts
@@ -672,7 +680,7 @@ class MobotService(rpyc.Service):
         lwheel = max(min(lwheel, 255), -255)
         rwheel = max(min(rwheel, 255), -255)
 
-        return (lwheel, rwheel
+        return (lwheel, rwheel)
 
 if __name__ == "__main__":
     init("initiating mobot server")
