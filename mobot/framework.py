@@ -460,7 +460,7 @@ class MobotService(rpyc.Service):
             'BATT': 100, 'ADDR': LOCAL_ADDR
         }
 
-        self.cntframe = np.zeros((V_WIDTH, V_HEIGHT))
+        self.cntframe = np.zeros((V_HEIGHT, V_WIDTH))
         self.trackingpts = []
 
         self.vL = 0 # left speed

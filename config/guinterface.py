@@ -507,10 +507,12 @@ class Interface(Application):
         font="airborne 16",fill="white")
         # put video on canvas #
         raw = self.conn.root.getMobotVision()
+        print np.fromstring(self.conn.root.getMobotVision()).shape
         if raw != None:
             self.image = _grayToTkImage(
-                np.fromstring(self.conn.root.getMobotVision())
-            )
+                np.fromstring(self.conn.root.getMobotVision(),
+                    dtype=np.uint8).reshape((V_HEIGHT, V_WIDTH))
+                )
             canvas.create_image(70,140,anchor=NW,image=self.image)
         else:
             # Draw 'No Signal on canvas'
