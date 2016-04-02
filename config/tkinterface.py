@@ -124,6 +124,8 @@ class InterfaceService(rpyc.Service):
         # BATT: (int) battery percentage
         # ADDR: (str) address of service machine (can be mobot)
 
+        self.geometry = (320, 240)
+
         self.trackingpts = []
         self.cntframe = None
         # Connection instance
@@ -163,7 +165,21 @@ class InterfaceService(rpyc.Service):
                 for pt in pts:
                     self.trackingpts.append(pt)
                 # Update frame
-                self.cntframe = self.conn.root.getCurrentFrame()
+                # self.cntframe = np.array(
+                #     tuple(self.conn.root.getCurrentFrame())
+                # )
+                frame = self.conn.root.getCurrentFrame()
+                self.cntframe = np.zeros(self.geometry)
+                for row in xrange(len(frame)):
+                    for col in xrange(len(row)):
+                        self.cntframe[row][col] = frame[row][col]
+                print self.cntframe[0]
+                print self.cntframe[1]
+                print self.cntframe[2]
+                print self.cntframe[0][0]
+                print self.cntframe[0][1]
+                print self.cntframe[0][2]
+                print self.cntframe
             except:
                 warn("sync failed")
             time.sleep(0.1)
@@ -172,6 +188,9 @@ class InterfaceService(rpyc.Service):
         try:
             self.conn = rpyc.connect(addr, port)
             if self.conn.root.recognized():
+                # Configure geometry
+                self.geometry[0] = self.conn.root.getVideoSpecs()[0]
+                self.geometry[1] = self.conn.root.getVideoSpecs()[1]
                 speaklog("connected to mobot, syncing data")
                 return 0
             else:

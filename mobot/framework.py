@@ -565,6 +565,10 @@ class MobotService(rpyc.Service):
         # Changing the values in dict will directly affect local var
         return self.values
 
+    def exposed_getVideoSpecs(self):
+        # Returns the frame size
+        return (V_WIDTH, V_HEIGHT)
+
     def exposed_getCurrentFrame(self):
         # Returns an ndarray in grayscale representing what the mobot is seeing
         return self.cntframe
