@@ -17,6 +17,7 @@ import time
 import rpyc
 import socket
 import threading
+import numpy as np
 import Tkinter as tk
 from utils import speak, speaklog, info, warn, init
 from rpyc.utils.server import ThreadedServer
@@ -28,7 +29,7 @@ from rpyc.utils.server import ThreadedServer
 
 # Connection Configuration
 # This is the address and port number of raspberry pi control server
-MOBOT_ADDR = "128.237.208.193"
+MOBOT_ADDR = "128.237.189.244"
 MOBOT_PORT = 15112
 BACKBONE_PORT = 15251
 VIDEO_PORT = 20000
@@ -124,6 +125,7 @@ class InterfaceService(rpyc.Service):
         # ADDR: (str) address of service machine (can be mobot)
 
         self.trackingpts = []
+        self.cntframe = None
         # Connection instance
         self.conn = None
         self.updatestop = threading.Event()
@@ -160,6 +162,8 @@ class InterfaceService(rpyc.Service):
                 del self.trackingpts[:]
                 for pt in pts:
                     self.trackingpts.append(pt)
+                # Update frame
+                self.cntframe = self.conn.root.getCurrentFrame()
             except:
                 warn("sync failed")
             time.sleep(0.1)
@@ -191,6 +195,7 @@ class InterfaceService(rpyc.Service):
                 'A': 0.6, 'B': 0.3, 'C': 0.1,
             'TCHS': 0.5, 'GATG': 14, 'MAXS': 100
         }
+        self.cntframe = None
         del self.trackingpts[:]
 
     def exposed_startStream(self, addr, port):
@@ -205,6 +210,12 @@ class InterfaceService(rpyc.Service):
         #     self.status = self.conn.root.getMobotStatus()
         #     self._updated = True
         return self.status
+
+    def exposed_getMobotVision(self):
+        # Returns a weak reference to the mobot's frame holder
+        # @retval:
+        # None (or) <weak-ref> -> numpy.ndarray
+        return self.cntframe
 
     def exposed_getTrackingPts(self):
         # if self.conn != None and not self._updated:

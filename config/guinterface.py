@@ -14,7 +14,7 @@ import subprocess
 from Tkinter import *
 from PIL import Image, ImageTk
 
-MOBOT_ADDR = "128.237.208.193"
+MOBOT_ADDR = "128.237.189.244"
 MOBOT_PORT = 15112
 VIDEO_PORT = 20000
 ADDR, PORT = 'localhost', 15251
@@ -505,8 +505,13 @@ class Interface(Application):
         canvas.create_text(230,120,anchor=N,text="FRONT",
         font="airborne 16",fill="white")
         # put video on canvas #
-        self.image = readTkImage(self.video)
-        canvas.create_image(70,140,anchor=NW,image=self.image)
+        image = _grayToTkImage(self.conn.root.getMobotVision())
+        if image != None:
+            self.image = image
+            canvas.create_image(70,140,anchor=NW,image=self.image)
+        else:
+            # Draw 'No Signal on canvas'
+            pass
 
         # print self.conn.root.getTrackingPts()
         for pt in self.conn.root.getTrackingPts():
