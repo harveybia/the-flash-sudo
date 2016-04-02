@@ -570,8 +570,8 @@ class MobotService(rpyc.Service):
         return (V_WIDTH, V_HEIGHT)
 
     def exposed_getCurrentFrame(self):
-        # Returns an ndarray in grayscale representing what the mobot is seeing
-        return self.cntframe
+        # Returns a string of ndarray in grayscale
+        return self.cntframe.tostring()
 
     def exposed_getTrackingPts(self):
         return self.trackingpts

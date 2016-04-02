@@ -509,7 +509,7 @@ class Interface(Application):
         raw = self.conn.root.getMobotVision()
         if raw != None:
             self.image = _grayToTkImage(
-                np.array(tuple(self.conn.root.getMobotVision()))
+                np.fromstring(self.conn.root.getMobotVision())
             )
             canvas.create_image(70,140,anchor=NW,image=self.image)
         else:
