@@ -41,7 +41,7 @@ def _rgbToTkImage(img):
 
 def _grayToTkImage(img):
     # Convert the Image object into a TkPhoto object
-    im = Image.fromarray(grayToRGB(img))
+    im = Image.fromarray(_grayToRGB(img))
     return ImageTk.PhotoImage(im)
 
 def startVideoStream(addr=MOBOT_ADDR, port=VIDEO_PORT):

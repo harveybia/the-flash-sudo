@@ -39,7 +39,7 @@ BrickPiSetup()
 L = PORT_B
 L1 = PORT_A
 R = PORT_C
-R2 = PORT_D
+R1 = PORT_D
 S2 = PORT_4
 
 # Exceptions
@@ -562,7 +562,7 @@ class MobotService(rpyc.Service):
         # Returning the weak reference to values dict
         # Changing the values in dict will directly affect local var
         return self.values
-    
+
     def exposed_getCurrentFrame(self):
         # Returns an ndarray in grayscale representing what the mobot is seeing
         return self.cntframe
