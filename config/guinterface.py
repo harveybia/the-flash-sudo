@@ -11,6 +11,7 @@ import time
 import rpyc
 import socket
 import subprocess
+import numpy as np
 from Tkinter import *
 from PIL import Image, ImageTk
 
@@ -191,7 +192,7 @@ class Interface(Application):
         # Connection to raw video stream
         self.conn.root.startStream(MOBOT_ADDR, MOBOT_PORT)
         time.sleep(0.5)
-        self.video = startVideoStream()
+        # self.video = startVideoStream()
         # self.image = readTkImage(self.video)
 
     def getMonitorSelectorList(self):
@@ -505,7 +506,9 @@ class Interface(Application):
         canvas.create_text(230,120,anchor=N,text="FRONT",
         font="airborne 16",fill="white")
         # put video on canvas #
-        image = _grayToTkImage(self.conn.root.getMobotVision())
+        image = _grayToTkImage(
+            np.array(tuple(self.conn.root.getMobotVision()))
+        )
         if image != None:
             self.image = image
             canvas.create_image(70,140,anchor=NW,image=self.image)

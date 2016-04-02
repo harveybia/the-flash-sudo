@@ -53,6 +53,8 @@ class ParameterInvalidException(Exception):
 # Left and Right Motors:
 BrickPi.MotorEnable[L] = 1 # LEFT
 BrickPi.MotorEnable[R] = 1 # RIGHT
+BrickPi.MotorEnable[L1] = 1 # LEFT
+BrickPi.MotorEnable[R1] = 1 # RIGHT
 
 # Touch Sensor Initialization:
 BrickPi.SensorType[S2] = TYPE_SENSOR_EV3_TOUCH_DEBOUNCE
