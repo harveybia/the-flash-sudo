@@ -169,6 +169,8 @@ def _getTrackingPointProbability(img, pt):
     # @param:
     # img: (ndarray) the image with one channel: graysacle
     # pt: ([2D]tuple) the point to check
+    return 1
+
     h, w = img.shape[0], img.shape[1]
     x, y = pt[0], pt[1]
     concession = 0.1
