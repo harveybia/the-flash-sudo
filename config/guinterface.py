@@ -15,7 +15,7 @@ import numpy as np
 from Tkinter import *
 from PIL import Image, ImageTk
 
-MOBOT_ADDR = "128.237.189.244"
+MOBOT_ADDR = "128.237.167.11"
 MOBOT_PORT = 15112
 VIDEO_PORT = 20000
 ADDR, PORT = 'localhost', 15251
@@ -507,7 +507,6 @@ class Interface(Application):
         font="airborne 16",fill="white")
         # put video on canvas #
         raw = self.conn.root.getMobotVision()
-        print np.fromstring(self.conn.root.getMobotVision()).shape
         if raw != None:
             self.image = _grayToTkImage(
                 np.fromstring(self.conn.root.getMobotVision(),

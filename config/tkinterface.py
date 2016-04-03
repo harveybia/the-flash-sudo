@@ -29,7 +29,7 @@ from rpyc.utils.server import ThreadedServer
 
 # Connection Configuration
 # This is the address and port number of raspberry pi control server
-MOBOT_ADDR = "128.237.189.244"
+MOBOT_ADDR = "128.237.167.11"
 MOBOT_PORT = 15112
 BACKBONE_PORT = 15251
 VIDEO_PORT = 20000
@@ -84,7 +84,7 @@ class InterfaceService(rpyc.Service):
 
         self.values = {
             'BRIG': 0, 'CNST': 50, 'BLUR': 4,
-            'THRS': 150, 'SIZE': 4, 'CERT': 0.7, 'PTS': 5, 'RADI': 10,
+            'THRS': 150, 'SIZE': 4, 'CERT': 0.7, 'PTS': 5, 'RADI': 30,
                 'A': 0.6, 'B': 0.3, 'C': 0.1,
             'TCHS': 0.5, 'GATG': 14, 'MAXS': 100
         }
