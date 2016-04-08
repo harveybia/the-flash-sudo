@@ -20,6 +20,7 @@ import rpyc
 import struct
 import socket
 import picamera
+import threshold
 import threading
 import numpy as np
 from PIL import Image
@@ -389,18 +390,61 @@ class ImageProcessor(threading.Thread):
         # Do the image processing
         # Generate grayscale image
         grayimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # Blur image
+        blurred = findBlurred(grayimg, BLUR_FACTOR)
+
+        # Find dynamic threshold for image
+        DYN_THRESHOLD = threshold.get_grey(blurred, sample_rows = 20,
+            col_step = 5, rank = 5)
+
+        # Display necessary information on HUD
+        cv2.putText(grayimg, "THRESHOLD: %d"%DYN_THRESHOLD, (5, 5),
+            cv2.FONT_HERSHEY_SIMPLEX, 12, (0, 255, 0))
+
         # Grayscale image is faster to fetch for client
         # Update server frame
         self.master.cntframe = grayimg
 
-        # Blur image
-        blurred = findBlurred(grayimg, BLUR_FACTOR)
         # Find tracking points
         master.trackingpts = samplePoints(blurred, _isPotentialTrackingPoint,
             n=TRACK_PT_NUM, radius=RADIUS, a=ALPHA, b=BETA, c=GAMMA,
-            threshold=THRESHOLD, samplesize=SAMPLESIZE, certainty=CERTAINTY)
+            threshold=DYN_THRESHOLD, samplesize=SAMPLESIZE, certainty=CERTAINTY)
 
         # info(str(master.trackingpts))
+
+    @profile
+    def alphacv(self, img):
+        # This is an alternative computer vision algorithm proposed by Matthew
+        master = self.master
+        BLUR_FACTOR = master.values['BLUR']
+        TRACK_PT_NUM = master.values['PTS']
+        RADIUS = master.values['RADI']
+        ALPHA = master.values['A']
+        BETA = master.values['B']
+        GAMMA = 1 - ALPHA - BETA
+        THRESHOLD = master.values['THRS']
+        SAMPLESIZE = master.values['SIZE']
+        CERTAINTY = master.values['CERT']
+        # Do the image processing
+        # Generate grayscale image
+        grayimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # Blur image
+        blurred = findBlurred(grayimg, BLUR_FACTOR)
+
+        # The dynamic threshold calculation is embedded in algorithm
+        # TODO: Experiment to be done to determine the realibility of statistic
+
+        # Display necessary information on HUD
+        cv2.putText(grayimg, "DYN ALPHACV IN SESSION", (5, 5),
+            cv2.FONT_HERSHEY_SIMPLEX, 12, (0, 255, 0))
+
+        # Update server frame
+        self.master.cntframe = grayimg
+
+        # Find tracking segments
+        segments = threshold.get_white_segments()
 
     def run(self):
         # Runs as separate thread

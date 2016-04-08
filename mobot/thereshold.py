@@ -1,3 +1,16 @@
+####################################
+# Dynamic threshold and cv segment #
+# copyright 2015-2016 Matthew Zhao #
+####################################
+flash = \
+"""
+  __  .__                       _____.__                .__
+_/  |_|  |__   ____           _/ ____\  | _____    _____|  |__
+\   __\  |  \_/ __ \   ______ \   __\|  | \__  \  /  ___/  |  \\
+ |  | |   Y  \  ___/  /_____/  |  |  |  |__/ __ \_\___ \|   Y  \\
+ |__| |___|  /\___  >          |__|  |____(____  /____  >___|  /
+           \/     \/                           \/     \/     \/
+"""
 from utils import init, info, warn, term2
 
 def get_grey(pic, sample_rows = 5, col_step = 5, rank = 10):
@@ -5,7 +18,7 @@ def get_grey(pic, sample_rows = 5, col_step = 5, rank = 10):
     # @params
     # sample_rows: (int) # of random rows to sample
     # col_step: (int) # of columns to skip
-    # rank: (int) record the top *rank* most white/black pixel
+    # rank: (int) discard the top *rank* highest/lowest entries
     sample_index = range(len(pic))
     random.shuffle(sample_index)
     sample = []
@@ -14,9 +27,9 @@ def get_grey(pic, sample_rows = 5, col_step = 5, rank = 10):
         for j in xrange(0, len(row), col_step):
             pixel = row[j]
             sample.append(pixel)
-    return get_thereshold(sample)
+    return get_thereshold(sample, rank)
 
-def get_white_segments_from_bot(pic, sample_rows = 5, buckets = 50):
+def get_white_segments(pic, sample_rows = 5, buckets = 50):
     # Get the white segments from the bottom few rows of a black/white picture
     # @params
     # sample_rows: (int) # of concequtive bottom rows to sample
@@ -49,7 +62,7 @@ def get_white_segments_from_bot(pic, sample_rows = 5, buckets = 50):
         # We need to add the last segment
         result.append((start, width))
     assert result != []
-    if len(result) > 2: 
+    if len(result) > 2:
         warn("More than 2 white lines detected, possible error!")
     return result
 
@@ -73,19 +86,16 @@ def get_histogram(A, buckets):
             result[bucket] += row[i]
     return result
 
-def get_thereshold(l, rank):
+def get_thereshold(l, rank = 10):
     # Get the mid(separator) value from a list of integers
     # @params
     # l: (list<int>) the list of intergers
     # rank: (int) discard the top *rank* highest/lowest entries
     assert rank > 0
-    if len(l) < rank: 
+    if len(l) < rank:
         warn("List too short for rank!")
         rank = len(l)
     sorted_list = sorted(l)
     lo = sorted_list[rank - 1]
     hi = sorted_list[len(l) - rank]
     return (lo + hi) / 2
-
-
-
