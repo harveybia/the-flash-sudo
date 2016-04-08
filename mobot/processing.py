@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 
-def get_grey(pic, sample_rows = 5, col_step = 5, rank = 10):
+def get_grey(pic, sample_rows = 5, col_step = 5, rank = 5):
     # Get the prefect grey value from a black/white picture
     # @params
     # sample_rows: (int) # of random rows to sample
@@ -19,14 +19,19 @@ def get_grey(pic, sample_rows = 5, col_step = 5, rank = 10):
             sample.append(pixel)
     return get_thereshold(sample)
 
-def get_white_segments_from_bot(pic, sample_rows = 5, buckets = 50):
+def get_white_segments_from_row(pic, row, 
+        sample_rows = 5, buckets = 50, min_length = 30, max_gap = 4):
     # Get the white segments from the bottom few rows of a black/white picture
     # @params
+    # row: (int) Normally should be larger than sample_rows
     # sample_rows: (int) # of concequtive bottom rows to sample
     # buckets: (int) the resolution of sampling
+    # min_length: (int) the minimum length a valid segment can have
+    # min_interval: (int) the maximum gap interms of # of buckets
+    # between two segments that allows them to be merged
     height = len(pic)
     width = len(pic[0])
-    sample = pic[height - sample_rows:]
+    sample = pic[max(0, row - sample_rows): row]
     bucket_size = (width - 1) / buckets + 1
     histogram = get_histogram(sample, buckets)
     thereshold = get_thereshold(histogram)
@@ -34,26 +39,47 @@ def get_white_segments_from_bot(pic, sample_rows = 5, buckets = 50):
     # Find the starts and ends for the white segments
     black_flag = True   # We start from black region
     result = []
-    start, end = 0, 0
+    start, end = 0, None
+    gap = None
     for i in range(buckets):
         value = histogram[i]
         if value > thereshold:
         # We are seeing a white region
             if black_flag:
                 black_flag = False
-                start = i * bucket_size
+                if gap != None and gap < max_gap:
+                # We are just seeing white with a little interuption
+                    pass
+                else:
+                    if end != None: 
+                        # This is not the first time we've seen white
+                        result.append((start, end))
+                    start = i * bucket_size
+            gap = 0
         else:
         # We are seeing a black region
+            if gap != None:
+                # We've seen white, counting the gap 
+                gap += 1
             if not black_flag:
                 black_flag = True
                 end = i * bucket_size
-                result.append((start, end))
+                # result.append((start, end))
     if start > end:
         # We need to add the last segment
         result.append((start, width))
+    else: result.append((start, end))
     assert result != []
+    # get rid of segments that are too short
+    i = 0
+    while i < len(result):
+        segment = result[i]
+        if abs(segment[1] - segment[0]) < min_length:
+            result.pop(i)
+        else: i += 1
+
     if len(result) > 2: 
-        warn("More than 2 white lines detected, possible error!")
+        print("More than 2 white lines detected, possible error!")
     return result
 
 def get_histogram(A, buckets):
@@ -75,7 +101,7 @@ def get_histogram(A, buckets):
             result[bucket] += row[i]
     return result
 
-def get_thereshold(l, rank = 5):
+def get_thereshold(l, rank = 2):
     # Get the mid(separator) value from a list of integers
     # @params
     # l: (list<int>) the list of intergers
@@ -105,13 +131,19 @@ def test_perspective():
     plt.show()
 
 def test_get_line_segment():
-    img = cv2.imread('../tests/1.jpg')
-    img = cv2.resize(img,(300,300), interpolation = cv2.INTER_CUBIC)
+    img = cv2.imread('../tests/4.jpg')
+    height, width = 300, 300
+    img = cv2.resize(img,(width, height), interpolation = cv2.INTER_CUBIC)
     rows,cols,ch = img.shape
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    result = get_white_segments_from_bot(img)
-    cv2.line(img,(result[0][0],rows),(result[0][1], rows),(0,0,255),5)
-    print(result)
+
+    interval = 15
+    for i in xrange(15):
+        row = height - i * interval
+        result = get_white_segments_from_row(img, row)
+        print(result)
+        for segment in result:
+            cv2.line(img,(segment[0],row),(segment[1], row),(0,0,255),5)
     plt.imshow(img, cmap = 'gray', interpolation = 'bicubic')
     plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
     plt.show()
@@ -119,4 +151,4 @@ def test_get_line_segment():
 def test():pass
 
 if __name__ == '__main__':
-    test()
+    test_get_line_segment()
