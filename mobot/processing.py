@@ -1,4 +1,7 @@
-from utils import init, info, warn, term2
+#from utils import init, info, warn, term2
+import numpy as np
+import cv2
+from matplotlib import pyplot as plt
 
 def get_grey(pic, sample_rows = 5, col_step = 5, rank = 10):
     # Get the prefect grey value from a black/white picture
@@ -27,7 +30,7 @@ def get_white_segments_from_bot(pic, sample_rows = 5, buckets = 50):
     bucket_size = (width - 1) / buckets + 1
     histogram = get_histogram(sample, buckets)
     thereshold = get_thereshold(histogram)
-    assert len(histogram) = buckets
+    assert len(histogram) == buckets
     # Find the starts and ends for the white segments
     black_flag = True   # We start from black region
     result = []
@@ -41,7 +44,7 @@ def get_white_segments_from_bot(pic, sample_rows = 5, buckets = 50):
                 start = i * bucket_size
         else:
         # We are seeing a black region
-            if !black_flag:
+            if not black_flag:
                 black_flag = True
                 end = i * bucket_size
                 result.append((start, end))
@@ -60,7 +63,6 @@ def get_histogram(A, buckets):
     # A: (list<list<int>>) the rows of numbers to sample
     # buckets: (int) the # of buckets
     assert A != []
-    if type(A[0]) != list: A = [A]
     n = len(A[0])
     assert n > 0
     bucket_size = (n - 1) / buckets + 1
@@ -73,7 +75,7 @@ def get_histogram(A, buckets):
             result[bucket] += row[i]
     return result
 
-def get_thereshold(l, rank):
+def get_thereshold(l, rank = 5):
     # Get the mid(separator) value from a list of integers
     # @params
     # l: (list<int>) the list of intergers
@@ -87,5 +89,34 @@ def get_thereshold(l, rank):
     hi = sorted_list[len(l) - rank]
     return (lo + hi) / 2
 
+def test_perspective():
+    img = cv2.imread('../tests/1.jpg')
+    rows,cols,ch = img.shape
+    cv2.line(img,(0,0),(1000,511),(0,0,250),5)
+    pts1 = np.float32([[0,0],[cols,0],[0,rows],[cols,rows]])
+    pts2 = np.float32([[0,0],[cols,rows/3],[0,rows],[cols,rows * 2 / 3]])
 
+    M = cv2.getPerspectiveTransform(pts1,pts2)
 
+    dst = cv2.warpPerspective(img,M,(cols,rows))
+
+    plt.subplot(121),plt.imshow(img),plt.title('Input')
+    plt.subplot(122),plt.imshow(dst),plt.title('Output')
+    plt.show()
+
+def test_get_line_segment():
+    img = cv2.imread('../tests/1.jpg')
+    img = cv2.resize(img,(300,300), interpolation = cv2.INTER_CUBIC)
+    rows,cols,ch = img.shape
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    result = get_white_segments_from_bot(img)
+    cv2.line(img,(result[0][0],rows),(result[0][1], rows),(0,0,255),5)
+    print(result)
+    plt.imshow(img, cmap = 'gray', interpolation = 'bicubic')
+    plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
+    plt.show()
+
+def test():pass
+
+if __name__ == '__main__':
+    test()
