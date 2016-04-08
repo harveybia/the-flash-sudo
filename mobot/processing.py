@@ -3,12 +3,12 @@ import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 
-def get_grey(pic, sample_rows = 5, col_step = 5, rank = 5):
-    # Get the prefect grey value from a black/white picture
+def get_gray(pic, sample_rows = 5, col_step = 5, rank = 5):
+    # Get the prefect gray value from a black/white picture
     # @params
     # sample_rows: (int) # of random rows to sample
     # col_step: (int) # of columns to skip
-    # rank: (int) record the top *rank* most white/black pixel
+    # rank: (int) discard the top *rank* most white/black pixel
     sample_index = range(len(pic))
     random.shuffle(sample_index)
     sample = []
@@ -17,14 +17,14 @@ def get_grey(pic, sample_rows = 5, col_step = 5, rank = 5):
         for j in xrange(0, len(row), col_step):
             pixel = row[j]
             sample.append(pixel)
-    return get_thereshold(sample)
+    return get_threshold(sample, rank)
 
-def get_white_segments_from_row(pic, row, 
+def get_white_segments_from_row(pic, row,
         sample_rows = 5, buckets = 50, min_length = 30, max_gap = 4):
     # Get the white segments from the bottom few rows of a black/white picture
     # @params
     # row: (int) Normally should be larger than sample_rows
-    # sample_rows: (int) # of concequtive bottom rows to sample
+    # sample_rows: (int) # of consecutive bottom rows to sample
     # buckets: (int) the resolution of sampling
     # min_length: (int) the minimum length a valid segment can have
     # min_interval: (int) the maximum gap interms of # of buckets
@@ -34,7 +34,7 @@ def get_white_segments_from_row(pic, row,
     sample = pic[max(0, row - sample_rows): row]
     bucket_size = (width - 1) / buckets + 1
     histogram = get_histogram(sample, buckets)
-    thereshold = get_thereshold(histogram)
+    thereshold = get_threshold(histogram)
     assert len(histogram) == buckets
     # Find the starts and ends for the white segments
     black_flag = True   # We start from black region
@@ -51,7 +51,7 @@ def get_white_segments_from_row(pic, row,
                 # We are just seeing white with a little interuption
                     pass
                 else:
-                    if end != None: 
+                    if end != None:
                         # This is not the first time we've seen white
                         result.append((start, end))
                     start = i * bucket_size
@@ -59,7 +59,7 @@ def get_white_segments_from_row(pic, row,
         else:
         # We are seeing a black region
             if gap != None:
-                # We've seen white, counting the gap 
+                # We've seen white, counting the gap
                 gap += 1
             if not black_flag:
                 black_flag = True
@@ -78,7 +78,7 @@ def get_white_segments_from_row(pic, row,
             result.pop(i)
         else: i += 1
 
-    if len(result) > 2: 
+    if len(result) > 2:
         print("More than 2 white lines detected, possible error!")
     return result
 
@@ -101,13 +101,13 @@ def get_histogram(A, buckets):
             result[bucket] += row[i]
     return result
 
-def get_thereshold(l, rank = 2):
+def get_threshold(l, rank = 2):
     # Get the mid(separator) value from a list of integers
     # @params
-    # l: (list<int>) the list of intergers
+    # l: (list<int>) the list of integers
     # rank: (int) discard the top *rank* highest/lowest entries
     assert rank > 0
-    if len(l) < rank: 
+    if len(l) < rank:
         warn("List too short for rank!")
         rank = len(l)
     sorted_list = sorted(l)
@@ -138,7 +138,7 @@ def test_get_line_segment():
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
     interval = 15
-    for i in xrange(15):
+    for i in xrange(interval):
         row = height - i * interval
         result = get_white_segments_from_row(img, row)
         print(result)
