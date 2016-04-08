@@ -20,8 +20,8 @@ import rpyc
 import struct
 import socket
 import picamera
-import threshold
 import threading
+import processing
 import numpy as np
 from PIL import Image
 from BrickPi import *
@@ -395,7 +395,7 @@ class ImageProcessor(threading.Thread):
         blurred = findBlurred(grayimg, BLUR_FACTOR)
 
         # Find dynamic threshold for image
-        DYN_THRESHOLD = threshold.get_grey(blurred, sample_rows = 20,
+        DYN_THRESHOLD = processing.get_grey(blurred, sample_rows = 20,
             col_step = 5, rank = 5)
 
         # Display necessary information on HUD
@@ -404,7 +404,7 @@ class ImageProcessor(threading.Thread):
 
         # Grayscale image is faster to fetch for client
         # Update server frame
-        self.master.cntframe = grayimg
+        master.cntframe = grayimg
 
         # Find tracking points
         master.trackingpts = samplePoints(blurred, _isPotentialTrackingPoint,
@@ -440,11 +440,23 @@ class ImageProcessor(threading.Thread):
         cv2.putText(grayimg, "DYN ALPHACV IN SESSION", (5, 5),
             cv2.FONT_HERSHEY_SIMPLEX, 12, (0, 255, 0))
 
-        # Update server frame
-        self.master.cntframe = grayimg
-
+        rols, cols = img.shape
         # Find tracking segments
-        segments = threshold.get_white_segments()
+        interval = 15
+        segments = [[],] * interval
+        pts = [(),] * min(TRACK_PT_NUM, interval)
+        for i in xrange(interval):
+            # With the assumption that the mobot always turn left on turn:
+            # TODO: The turning decision is to made
+            row = V_HEIGHT - i * interval
+            segments[i] = get_white_segments_from_row(blurred, row)
+            if i < min(TRACK_PT_NUM, interval):
+                pts[i][0] = row
+                pts[i][1] = (segments[i][0][0] + segments[i][0][1]) / 2
+            cv2.line(grayimg, (segments[i][0], row), (segments[i][1], row,
+                (0, 0, 255), 3))
+
+        master.trackingpts = pts
 
     def run(self):
         # Runs as separate thread
