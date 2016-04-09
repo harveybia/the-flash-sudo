@@ -51,7 +51,7 @@ def get_gray(pic, sample_rows = 5, col_step = 5, rank = 5):
     return get_threshold(sample, rank)
 
 def get_white_segments_from_row(pic, row,
-        sample_rows = 5, buckets = 50, min_length = 20, max_gap = 4):
+        sample_rows = 5, buckets = 50, min_length = 10, max_gap = 4):
     # Get the white segments from the bottom few rows of a black/white picture
     # @params
     # row: (int) Normally should be larger than sample_rows
