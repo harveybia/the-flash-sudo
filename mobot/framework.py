@@ -455,7 +455,7 @@ class ImageProcessor(threading.Thread):
             # TODO: The turning decision is to made
             row = V_HEIGHT - i * interval
             result = processing.get_white_segments_from_row(blurred, row,
-                sample_rows = 2)
+                rank = 5)
             midpt = (int(result[0][0]) + int(result[0][1])) / 2
             pts.append((midpt, row))
             for seg in result:
@@ -738,6 +738,9 @@ class MobotService(rpyc.Service):
             use_video_port=True)
 
     def calculateMobotMovement(self):
+        # For debug: set speed to 0
+        return (0, 0)
+
         # Error is the offset of the bottom trackpoint from middle of frame
         if len(self.trackingpts) == 0: return (0, 0)
         err = self.trackingpts[0][0] - V_WIDTH / 2
