@@ -488,7 +488,7 @@ class ImageProcessor(threading.Thread):
                     elif self.master.filterstate == 4:
                         self.alphacv(img)
 
-                    elif self.msater.filterstate == 6:
+                    elif self.master.filterstate == 6:
                         # HYBRID
                         # IRNV + ALPHACV
                         img = cv2.bitwise_not(img)
