@@ -515,7 +515,7 @@ class MobotService(rpyc.Service):
             'BATT': 100, 'ADDR': LOCAL_ADDR
         }
 
-        self.emptyfootage = np.zeros(V_HEIGHT, V_WIDTH, 1, dtype = np.uint8)
+        self.emptyfootage = np.zeros((V_HEIGHT, V_WIDTH), dtype = np.uint8)
         self.cntframe = self.emptyfootage.tostring()
         self.trackingpts = []
 
