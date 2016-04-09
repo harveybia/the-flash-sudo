@@ -448,7 +448,7 @@ class ImageProcessor(threading.Thread):
             if i < min(TRACK_PT_NUM, interval):
                 pts[i][0] = row
                 pts[i][1] = (segments[i][0][0] + segments[i][0][1]) / 2
-            cv2.line(grayimg, (segments[i][0], row), (segments[i][1], row,
+            cv2.line(grayimg, (segments[i][0][0], row), (segments[i][0][1], row,
                 (0, 0, 255), 3))
 
         master.trackingpts = pts
