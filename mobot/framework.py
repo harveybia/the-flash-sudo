@@ -14,6 +14,7 @@ _/  |_|  |__   ____           _/ ____\  | _____    _____|  |__
 
 import io
 import cv2
+import sys
 import time
 import math
 import rpyc
@@ -21,6 +22,7 @@ import struct
 import socket
 import picamera
 import threading
+import linecache
 import processing
 import numpy as np
 from PIL import Image
@@ -50,6 +52,16 @@ class ParameterInvalidException(Exception):
 
     def __str__(self):
         return repr(self.des)
+
+def echoException():
+    exc_type, exc_obj, tb = sys.exc_info()
+    f = tb.tb_frame
+    lineno = tb.tb_lineno
+    filename = f.f_code.co_filename
+    linecache.checkcache(filename)
+    line = linecache.getline(filename, lineno, f.f_globals)
+    print 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(
+        filename, lineno, line.strip(), exc_obj)
 
 # Left and Right Motors:
 BrickPi.MotorEnable[L] = 1 # LEFT
@@ -476,9 +488,7 @@ class ImageProcessor(threading.Thread):
                         self.betacv(img)
 
                 except Exception as inst:
-                    print type(inst)    # the exception instance
-                    print inst.args     # arguments stored in .args
-                    print inst
+                    echoException()
                     warn("image processor exception, frame skipped")
 
                 finally:
