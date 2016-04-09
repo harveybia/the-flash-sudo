@@ -139,6 +139,7 @@ def get_threshold(l, hi_rank = 2, lo_rank = 2):
     # @params
     # l: (list<int>) the list of integers
     # rank: (int) discard the top *rank* highest/lowest entries
+    rank = max(lo_rank, hi_rank)
     assert rank > 0
     if len(l) < rank:
         warn("List too short for rank!")
