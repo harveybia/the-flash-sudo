@@ -448,19 +448,19 @@ class ImageProcessor(threading.Thread):
         rols, cols, ch = img.shape
         # Find tracking segments
         interval = 1
-        segments = [[] for i in xrange(interval)]
         pt_count = min(TRACK_PT_NUM, interval)
-        pts = [[0,0] for i in xrange(pt_count)]
+        pts = []]
         for i in xrange(min(TRACK_PT_NUM, interval)):
             # With the assumption that the mobot always turn left on turn:
             # TODO: The turning decision is to made
             row = V_HEIGHT - i * interval
-            segments[i] = processing.get_white_segments_from_row(blurred, row,
+            result = processing.get_white_segments_from_row(blurred, row,
                 sample_rows = 2)
-            pts[i][0] = row
-            pts[i][1] = (segments[i][0][0] + segments[i][0][1]) / 2
-            cv2.line(grayimg, (segments[i][0][0], row),
-                (segments[i][0][1], row), (0, 0, 255), 3)
+            midpt = (int(result[0][0]) + int(result[0][1])) / 2
+            pts.append((midpt, row))
+            for seg in result:
+                cv2.line(grayimg, (seg[0], row), (seg[1], row), (0, 0, 255),
+                    3)
 
         master.cntframe = grayimg
         master.trackingpts = pts
