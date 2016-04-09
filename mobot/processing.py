@@ -143,7 +143,7 @@ def get_threshold(l, rank = 2):
         rank = len(l)
     sorted_list = sorted(l)
     lo = sorted_list[rank - 1]
-    hi = sorted_list[len(l) - rank]
+    hi = sorted_list[-1]
     return (int(lo) + int(hi)) / 2
 
 def gen_segment_nodes(all_segments):
