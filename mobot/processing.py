@@ -1,5 +1,6 @@
 #from utils import init, info, warn, term2
 import numpy as np
+import random
 import cv2
 if __name__ == "__main__":
     from matplotlib import pyplot as plt
