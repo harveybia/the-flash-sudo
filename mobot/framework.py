@@ -118,15 +118,10 @@ def profile(fn):
         return ret
     return with_profiling
 
-HEIGHT, WIDTH = V_HEIGHT, V_WIDTH
-
 def grayToRGB(img):
     # Converts grayscale image into RGB
     # This conversion uses numpy array operation and takes less time
     return cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-
-# I only put useful auxiliary functions here, to find more about my
-# work on cv checkout ../config/config.py
 
 @profile
 def findBlurred(img, blur_factor):
@@ -395,7 +390,7 @@ class ImageProcessor(threading.Thread):
         blurred = findBlurred(grayimg, BLUR_FACTOR)
 
         # Find dynamic threshold for image
-        DYN_THRESHOLD = processing.get_grey(blurred, sample_rows = 20,
+        DYN_THRESHOLD = processing.get_gray(blurred, sample_rows = 20,
             col_step = 5, rank = 5)
 
         # Display necessary information on HUD
@@ -520,7 +515,8 @@ class MobotService(rpyc.Service):
             'BATT': 100, 'ADDR': LOCAL_ADDR
         }
 
-        self.cntframe = None
+        self.emptyfootage = np.zeros(V_HEIGHT, V_WIDTH, 1, dtype = np.uint8)
+        self.cntframe = self.emptyfootage.tostring()
         self.trackingpts = []
 
         self.vL = 0 # left speed
@@ -631,7 +627,8 @@ class MobotService(rpyc.Service):
 
     def exposed_getCurrentFrame(self):
         # Returns a string of ndarray in grayscale
-        return self.cntframe.tostring() if self.cntframe != None else ''
+        return self.cntframe.tostring() if self.cntframe != None else \
+            self.emptyfootage.tostring()
 
     def exposed_getTrackingPts(self):
         return self.trackingpts
@@ -740,8 +737,8 @@ class MobotService(rpyc.Service):
         # Drive is positive when turning left
         drive = pterm + iterm + dterm
 
-        lwheel = - (self.basespeed + drive / 2)
-        rwheel = - (self.basespeed - drive / 2)
+        lwheel = self.basespeed - drive / 2
+        rwheel = self.basespeed + drive / 2
 
         # Cap the wheel speeds to [-255, 255]
         lwheel = max(min(lwheel, 255), -255)
