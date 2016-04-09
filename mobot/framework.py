@@ -126,7 +126,7 @@ def profile(fn):
         start_time = time.time()
         ret = fn(*args, **kwargs)
         elapsed_time = time.time() - start_time
-        info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
+        # info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
         return ret
     return with_profiling
 
@@ -444,26 +444,24 @@ class ImageProcessor(threading.Thread):
         # TODO: Experiment to be done to determine the realibility of statistic
 
         # Display necessary information on HUD
-        cv2.putText(grayimg, "DYN ALPHACV IN SESSION", (5, 5),
-            cv2.FONT_HERSHEY_SIMPLEX, 12, (0, 255, 0))
 
         rols, cols, ch = img.shape
         # Find tracking segments
-        interval = 15
-        segments = [[],] * interval
+        interval = 1
+        segments = [[] for i in xrange(interval)]
         pt_count = min(TRACK_PT_NUM, interval)
         pts = [[0,0] for i in xrange(pt_count)]
         for i in xrange(min(TRACK_PT_NUM, interval)):
             # With the assumption that the mobot always turn left on turn:
             # TODO: The turning decision is to made
             row = V_HEIGHT - i * interval
-            segments[i] = processing.get_white_segments_from_row(blurred, row)
+            segments[i] = processing.get_white_segments_from_row(blurred, row,
+                sample_rows = 2)
             pts[i][0] = row
             pts[i][1] = (segments[i][0][0] + segments[i][0][1]) / 2
             cv2.line(grayimg, (segments[i][0][0], row),
                 (segments[i][0][1], row), (0, 0, 255), 3)
 
-        info(str(pts))
         master.cntframe = grayimg
         master.trackingpts = pts
 
