@@ -48,10 +48,11 @@ def get_gray(pic, sample_rows = 5, col_step = 5, rank = 5):
             pixel = row[j]
             sample.append(pixel)
     # print(sample)
-    return get_threshold(sample, rank)
+    return get_threshold(sample)
 
 def get_white_segments_from_row(pic, row,
-        sample_rows = 5, buckets = 50, min_length = 0, max_gap = 4, rank = 2):
+        sample_rows = 5, buckets = 50, min_length = 0, max_gap = 4,
+        hi_rank = 2, lo_rank = 2):
     # Get the white segments from the bottom few rows of a black/white picture
     # @params
     # row: (int) Normally should be larger than sample_rows
@@ -65,7 +66,7 @@ def get_white_segments_from_row(pic, row,
     sample = pic[max(0, row - sample_rows): row]
     bucket_size = (width - 1) / buckets + 1
     histogram = get_histogram(sample, buckets)
-    thereshold = get_threshold(histogram, rank = rank)
+    thereshold = get_threshold(histogram, hi_rank = hi_rank, lo_rank = lo_rank)
     assert len(histogram) == buckets
     # Find the starts and ends for the white segments
     black_flag = True   # We start from black region
@@ -110,7 +111,8 @@ def get_white_segments_from_row(pic, row,
         else: i += 1
 
     if len(result) > 2:
-        warn("More than 2 white lines detected, possible error!")
+        pass
+        # warn("More than 2 white lines detected, possible error!")
     return result
 
 def get_histogram(A, buckets):
@@ -132,7 +134,7 @@ def get_histogram(A, buckets):
             result[bucket] += row[i]
     return result
 
-def get_threshold(l, rank = 2):
+def get_threshold(l, hi_rank = 2, lo_rank = 2):
     # Get the mid(separator) value from a list of integers
     # @params
     # l: (list<int>) the list of integers
@@ -142,8 +144,8 @@ def get_threshold(l, rank = 2):
         warn("List too short for rank!")
         rank = len(l)
     sorted_list = sorted(l)
-    lo = sorted_list[rank - 1]
-    hi = sorted_list[-1]
+    lo = sorted_list[lo_rank - 1]
+    hi = sorted_list[len(l) - hi_rank]
     return (int(lo) + int(hi)) / 2
 
 def gen_segment_nodes(all_segments):

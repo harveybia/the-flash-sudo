@@ -455,7 +455,7 @@ class ImageProcessor(threading.Thread):
             # TODO: The turning decision is to made
             row = V_HEIGHT - i * interval
             result = processing.get_white_segments_from_row(blurred, row,
-                rank = 5)
+                lo_rank = 10, hi_rank = 3)
             midpt = (int(result[0][0]) + int(result[0][1])) / 2
             pts.append((midpt, row))
             for seg in result:
