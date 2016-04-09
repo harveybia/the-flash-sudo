@@ -447,7 +447,7 @@ class ImageProcessor(threading.Thread):
 
         rols, cols, ch = img.shape
         # Find tracking segments
-        interval = 1
+        interval = 15
         pt_count = min(TRACK_PT_NUM, interval)
         pts = []
         for i in xrange(min(TRACK_PT_NUM, interval)):
