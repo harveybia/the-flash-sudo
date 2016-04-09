@@ -152,10 +152,12 @@ def test_get_line_segment():
     plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
     plt.show()
 
-def test():
+def test_get_grey():
     img = cv2.imread('../tests/4.jpg')
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     print(get_gray(img))
+
+def test():pass
 
 if __name__ == '__main__':
     test()
