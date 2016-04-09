@@ -480,11 +480,12 @@ class ImageProcessor(threading.Thread):
                     else:
                         self.betacv(img)
 
-                    # Control the robot
-                    # self.vL = ???
-                    # self.vR = ???
-                except:
+                except Exception as inst:
+                    print type(inst)    # the exception instance
+                    print inst.args     # arguments stored in .args
+                    print inst
                     warn("image processor exception, frame skipped")
+
                 finally:
                     # Reset the stream and event
                     self.stream.seek(0)
@@ -630,7 +631,7 @@ class MobotService(rpyc.Service):
 
     def exposed_getCurrentFrame(self):
         # Returns a string of ndarray in grayscale
-        return self.cntframe.tostring()
+        return self.cntframe.tostring() if self.cntframe != None else ''
 
     def exposed_getTrackingPts(self):
         return self.trackingpts

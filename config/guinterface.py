@@ -15,7 +15,7 @@ import numpy as np
 from Tkinter import *
 from PIL import Image, ImageTk
 
-MOBOT_ADDR = "128.237.215.214"
+MOBOT_ADDR = "128.237.185.202"
 MOBOT_PORT = 15112
 VIDEO_PORT = 20000
 ADDR, PORT = 'localhost', 15251
