@@ -1,7 +1,8 @@
 #from utils import init, info, warn, term2
 import numpy as np
 import cv2
-from matplotlib import pyplot as plt
+if __name__ == "__main__":
+    from matplotlib import pyplot as plt
 
 def get_gray(pic, sample_rows = 5, col_step = 5, rank = 5):
     # Get the prefect gray value from a black/white picture
