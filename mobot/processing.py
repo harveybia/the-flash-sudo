@@ -14,7 +14,7 @@ def get_gray(pic, sample_rows = 5, col_step = 5, rank = 5):
     sample_index = range(len(pic))
     random.shuffle(sample_index)
     sample = []
-    for i in ranges(sample_rows):
+    for i in range(sample_rows):
         row = sample_index[i]
         for j in xrange(0, len(row), col_step):
             pixel = row[j]
