@@ -447,7 +447,7 @@ class ImageProcessor(threading.Thread):
         cv2.putText(grayimg, "DYN ALPHACV IN SESSION", (5, 5),
             cv2.FONT_HERSHEY_SIMPLEX, 12, (0, 255, 0))
 
-        rols, cols = img.shape
+        rols, cols, ch = img.shape
         # Find tracking segments
         interval = 15
         segments = [[],] * interval
