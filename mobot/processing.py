@@ -20,7 +20,7 @@ def get_gray(pic, sample_rows = 5, col_step = 5, rank = 5):
         for j in xrange(0, len(row), col_step):
             pixel = row[j]
             sample.append(pixel)
-    print(sample)
+    # print(sample)
     return get_threshold(sample, rank)
 
 def get_white_segments_from_row(pic, row,
@@ -145,7 +145,7 @@ def test_get_line_segment():
     for i in xrange(interval):
         row = height - i * interval
         result = get_white_segments_from_row(img, row)
-        print(result)
+        # print(result)
         for segment in result:
             cv2.line(img,(segment[0],row),(segment[1], row),(0,0,255),5)
     plt.imshow(img, cmap = 'gray', interpolation = 'bicubic')
