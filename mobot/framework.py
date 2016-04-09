@@ -451,7 +451,8 @@ class ImageProcessor(threading.Thread):
         # Find tracking segments
         interval = 15
         segments = [[],] * interval
-        pts = [[0,0],] * min(TRACK_PT_NUM, interval)
+        pt_count = min(TRACK_PT_NUM, interval)
+        pts = [[0,0] for i in xrange(min(pt_count))]
         for i in xrange(min(TRACK_PT_NUM, interval)):
             # With the assumption that the mobot always turn left on turn:
             # TODO: The turning decision is to made
