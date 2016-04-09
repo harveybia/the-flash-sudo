@@ -483,9 +483,17 @@ class ImageProcessor(threading.Thread):
                     if self.master.filterstate == 3:
                         # IRNV: invert color
                         img = cv2.bitwise_not(img)
+                        self.betacv(img)
 
-                    if self.master.filterstate == 4:
+                    elif self.master.filterstate == 4:
                         self.alphacv(img)
+
+                    elif self.msater.filterstate == 6:
+                        # HYBRID
+                        # IRNV + ALPHACV
+                        img = cv2.bitwise_not(img)
+                        self.alphacv(img)
+
                     else:
                         self.betacv(img)
 
