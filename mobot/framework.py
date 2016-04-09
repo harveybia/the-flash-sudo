@@ -126,7 +126,7 @@ def profile(fn):
         start_time = time.time()
         ret = fn(*args, **kwargs)
         elapsed_time = time.time() - start_time
-        #info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
+        info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
         return ret
     return with_profiling
 
@@ -462,6 +462,7 @@ class ImageProcessor(threading.Thread):
             cv2.line(grayimg, (segments[i][0][0], row),
                 (segments[i][0][1], row), (0, 0, 255), 3)
 
+        info(str(pts))
         master.cntframe = grayimg
         master.trackingpts = pts
 

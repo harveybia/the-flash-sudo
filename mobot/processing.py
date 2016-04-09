@@ -1,4 +1,4 @@
-#from utils import init, info, warn, term2
+from utils import init, info, warn, term2
 import numpy as np
 import random
 import cv2
@@ -110,7 +110,7 @@ def get_white_segments_from_row(pic, row,
         else: i += 1
 
     if len(result) > 2:
-        print("More than 2 white lines detected, possible error!")
+        warn("More than 2 white lines detected, possible error!")
     return result
 
 def get_histogram(A, buckets):
@@ -323,7 +323,7 @@ def test_segment_tree():
     split = get_split(roots)
     if split != None: split = split.height * interval
     print "Converge: ", converge
-    print "Split: ", split    
+    print "Split: ", split
 
     plt.imshow(img, cmap = 'gray', interpolation = 'bicubic')
     plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
