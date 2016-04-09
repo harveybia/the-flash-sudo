@@ -5,6 +5,7 @@ import cv2
 if __name__ == "__main__":
     from matplotlib import pyplot as plt
 
+# It seems that it doesn't do what I want it to do
 def get_gray(pic, sample_rows = 5, col_step = 5, rank = 5):
     # Get the prefect gray value from a black/white picture
     # @params
@@ -15,10 +16,11 @@ def get_gray(pic, sample_rows = 5, col_step = 5, rank = 5):
     random.shuffle(sample_index)
     sample = []
     for i in range(sample_rows):
-        row = sample_index[i]
+        row = pic[sample_index[i]]
         for j in xrange(0, len(row), col_step):
             pixel = row[j]
             sample.append(pixel)
+    print(sample)
     return get_threshold(sample, rank)
 
 def get_white_segments_from_row(pic, row,
@@ -115,7 +117,7 @@ def get_threshold(l, rank = 2):
     sorted_list = sorted(l)
     lo = sorted_list[rank - 1]
     hi = sorted_list[len(l) - rank]
-    return (lo + hi) / 2
+    return (int(lo) + int(hi)) / 2
 
 def test_perspective():
     img = cv2.imread('../tests/1.jpg')
@@ -150,7 +152,10 @@ def test_get_line_segment():
     plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
     plt.show()
 
-def test():pass
+def test():
+    img = cv2.imread('../tests/4.jpg')
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    print(get_gray(img))
 
 if __name__ == '__main__':
-    test_get_line_segment()
+    test()
