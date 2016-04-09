@@ -475,9 +475,10 @@ class ImageProcessor(threading.Thread):
                         # IRNV: invert color
                         img = cv2.bitwise_not(img)
 
-                    # img = data = np.fromstring(self.stream.getvalue(),
-                    #     dtype=np.uint8)
-                    self.betacv(img)
+                    if self.master.filterstate == 4:
+                        self.alphacv(img)
+                    else:
+                        self.betacv(img)
 
                     # Control the robot
                     # self.vL = ???
