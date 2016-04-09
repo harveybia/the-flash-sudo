@@ -462,6 +462,7 @@ class ImageProcessor(threading.Thread):
             cv2.line(grayimg, (segments[i][0][0], row),
                 (segments[i][0][1], row), (0, 0, 255), 3)
 
+        master.cntframe = grayimg
         master.trackingpts = pts
 
     def run(self):
