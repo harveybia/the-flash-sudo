@@ -492,6 +492,19 @@ class Interface(Application):
         canvas.create_line(pt[0], pt[1], pt[0]+basis[0], pt[1]+basis[1],
             fill="red", width=1, arrow=LAST)
 
+    # def histeq(im,nbr_bins=256):
+    #     """  Histogram equalization of a grayscale image. """
+    #
+    #     # get image histogram
+    #     imhist,bins = histogram(im.flatten(),nbr_bins,normed=True)
+    #     cdf = imhist.cumsum() # cumulative distribution function
+    #     cdf = 255 * cdf / cdf[-1] # normalize
+    #
+    #     # use linear interpolation of cdf to find new pixel values
+    #     im2 = interp(im.flatten(),bins[:-1],cdf)
+    #
+    #     return im2.reshape(im.shape), cdf
+
     def drawVideo(self, canvas):
         canvas.create_text(30, 90, anchor=NW, text="LIVE FEED",
             font="airborne 18", fill="white")
@@ -514,10 +527,10 @@ class Interface(Application):
                 )
             canvas.create_image(70,140,anchor=NW,image=self.image)
 
-
-            im = array(Image.open(self.image).convert('L'))
-            im2,cdf = imtools.histeq(im)
-            canvas.create_image(70,140,anchor=NW,image=im2)
+            #
+            # im = array(Image.open(self.image).convert('L'))
+            # im2,cdf = imtools.histeq(im)
+            # canvas.create_image(70,140,anchor=NW,image=im2)
 
         else:
             # Draw 'No Signal on canvas'
