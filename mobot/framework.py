@@ -464,13 +464,14 @@ class ImageProcessor(threading.Thread):
         rols, cols, ch = img.shape
         # Find tracking segments
         interval = 15
-        pt_count = 10 #min(TRACK_PT_NUM, interval)
+        pt_count = 5 #min(TRACK_PT_NUM, interval)
         pts = []
         for i in xrange(pt_count):
             # With the assumption that the mobot always turn left on turn:
             # TODO: The turning decision is to made
             row = V_HEIGHT - i * interval
-            result = processing.get_white_segments_from_row(blurred, row)
+            result = processing.get_white_segments_from_row(blurred, row,
+                sample_rows = 5)
             if result != []:
                 midpt = (int(result[0][0]) + int(result[0][1])) / 2
                 pts.append((midpt, row))
