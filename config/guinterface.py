@@ -15,6 +15,7 @@ import numpy as np
 from Tkinter import *
 from PIL import Image, ImageTk
 
+
 MOBOT_ADDR = "128.237.167.11"
 MOBOT_PORT = 15112
 VIDEO_PORT = 20000
@@ -512,8 +513,18 @@ class Interface(Application):
                 np.fromstring(self.conn.root.getMobotVision(),
                     dtype=np.uint8).reshape((V_HEIGHT, V_WIDTH))
                 )
-            canvas.create_image(70,140,anchor=NW,image=self.image)
+            # canvas.create_image(70,140,anchor=NW,image=self.image)
+
+
+
         else:
+            self.image = _grayToTkImage(
+                np.fromstring(self.conn.root.getMobotVision(),
+                    dtype=np.uint8).reshape((V_HEIGHT, V_WIDTH))
+                )
+            im = array(Image.open(self.image).convert('L'))
+            im2,cdf = imtools.histeq(im)
+            canvas.create_image(70,140,anchor=NW,image=im2)
             # Draw 'No Signal on canvas'
             pass
 
