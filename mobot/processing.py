@@ -60,7 +60,7 @@ def get_gray(pic, sample_rows = 5, col_step = 5, rank = 5):
     return get_threshold(sample)
 
 def get_white_segments_from_row(pic, row,
-        sample_rows = 10, buckets = 50, min_length = 10, max_gap = 4):
+        sample_rows = 10, buckets = 50, min_length = 0, max_gap = 0):
     # Get the white segments from the bottom few rows of a black/white picture
     # @params
     # row: (int) Normally should be larger than sample_rows
@@ -75,7 +75,6 @@ def get_white_segments_from_row(pic, row,
     bucket_size = (width - 1) / buckets + 1
     histogram = get_histogram(sample, buckets)
     thereshold = new_get_gray(pic, row, sample_rows = sample_rows)
-    #thereshold_old = get_threshold(histogram)
     thereshold *= bucket_size * sample_rows
     # print "thereshold:", thereshold
     # print "old thereshold:", thereshold_old

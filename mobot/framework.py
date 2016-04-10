@@ -83,8 +83,8 @@ FRAMERATE = 5
 # Const:
 VERT_EXC_UP = 0.48
 VERT_EXC_DOWN = 0.07
-HORI_EXC_L = 0.10
-HORI_EXC_R = 0.10
+HORI_EXC_L = 0.0
+HORI_EXC_R = 0.0
 
 # Service configuration
 LOCAL_ADDR = socket.getfqdn()
@@ -132,13 +132,13 @@ def profile(fn):
         start_time = time.time()
         ret = fn(*args, **kwargs)
         elapsed_time = time.time() - start_time
-        # info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
+        info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
         return ret
     return with_profiling
 
 def cropImage(img, exc_up, exc_down, exc_l, exc_r, tgt_w, tgt_h):
     # Refer to design notebook for parameter documentation
-    assert(exc_up > 0 and exc_down > 0 and exc_l > 0 and exc_r > 0)
+    assert(exc_up >= 0 and exc_down >= 0 and exc_l >= 0 and exc_r >= 0)
     assert(exc_up + exc_down < 1 and exc_l + exc_r < 1)
     row, col, ch = img.shape
     x = int(col * exc_l)
@@ -461,7 +461,6 @@ class ImageProcessor(threading.Thread):
 
         # Display necessary information on HUD
 
-        rols, cols, ch = img.shape
         # Find tracking segments
         interval = 15
         pt_count = 10 #min(TRACK_PT_NUM, interval)
@@ -469,14 +468,21 @@ class ImageProcessor(threading.Thread):
         for i in xrange(pt_count):
             # With the assumption that the mobot always turn left on turn:
             # TODO: The turning decision is to made
+            # Resolution (temporary): to choose the points that are near the
+            # mid point of vision
             row = V_HEIGHT - i * interval
-            result = processing.get_white_segments_from_row(blurred, row)
+            result = processing.get_white_segments_from_row(blurred, row,
+                sample_rows = 5)
             if result != []:
-                midpt = (int(result[0][0]) + int(result[0][1])) / 2
-                pts.append((midpt, row))
+                best_pt = ((int(result[0][0]) + int(result[0][1])) / 2, row)
                 for seg in result:
+                    # Filter point closest to midpoint (x)
+                    pt_x = (int(seg[0]) + int(seg[1])) / 2
+                    if abs(pt_x - V_WIDTH/2) < abs(best_pt[0] - V_WIDTH/2):
+                        best_pt = (pt_x, row)
                     cv2.line(grayimg, (seg[0], row), (seg[1], row), (0, 0, 255),
                         3)
+                pts.append(best_pt)
 
         master.cntframe = grayimg
         master.trackingpts = pts
