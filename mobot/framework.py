@@ -132,7 +132,7 @@ def profile(fn):
         start_time = time.time()
         ret = fn(*args, **kwargs)
         elapsed_time = time.time() - start_time
-        # info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
+        info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
         return ret
     return with_profiling
 
