@@ -14,6 +14,7 @@ _/  |_|  |__   ____           _/ ____\  | _____    _____|  |__
 
 import io
 import cv2
+import sys
 import time
 import math
 import rpyc
@@ -21,6 +22,8 @@ import struct
 import socket
 import picamera
 import threading
+import linecache
+import processing
 import numpy as np
 from PIL import Image
 from BrickPi import *
@@ -49,6 +52,16 @@ class ParameterInvalidException(Exception):
 
     def __str__(self):
         return repr(self.des)
+
+def echoException():
+    exc_type, exc_obj, tb = sys.exc_info()
+    f = tb.tb_frame
+    lineno = tb.tb_lineno
+    filename = f.f_code.co_filename
+    linecache.checkcache(filename)
+    line = linecache.getline(filename, lineno, f.f_globals)
+    print 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(
+        filename, lineno, line.strip(), exc_obj)
 
 # Left and Right Motors:
 BrickPi.MotorEnable[L] = 1 # LEFT
@@ -113,19 +126,14 @@ def profile(fn):
         start_time = time.time()
         ret = fn(*args, **kwargs)
         elapsed_time = time.time() - start_time
-        #info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
+        # info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
         return ret
     return with_profiling
-
-HEIGHT, WIDTH = V_HEIGHT, V_WIDTH
 
 def grayToRGB(img):
     # Converts grayscale image into RGB
     # This conversion uses numpy array operation and takes less time
     return cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-
-# I only put useful auxiliary functions here, to find more about my
-# work on cv checkout ../config/config.py
 
 @profile
 def findBlurred(img, blur_factor):
@@ -389,18 +397,73 @@ class ImageProcessor(threading.Thread):
         # Do the image processing
         # Generate grayscale image
         grayimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        # Grayscale image is faster to fetch for client
-        # Update server frame
-        self.master.cntframe = grayimg
 
         # Blur image
         blurred = findBlurred(grayimg, BLUR_FACTOR)
+
+        # Find dynamic threshold for image
+        DYN_THRESHOLD = processing.get_gray(blurred, sample_rows = 20,
+            col_step = 5, rank = 5)
+
+        # Display necessary information on HUD
+        cv2.putText(grayimg, "THRESHOLD: %d"%DYN_THRESHOLD, (5, 5),
+            cv2.FONT_HERSHEY_SIMPLEX, 12, (0, 255, 0))
+
+        # Grayscale image is faster to fetch for client
+        # Update server frame
+        master.cntframe = grayimg
+
         # Find tracking points
         master.trackingpts = samplePoints(blurred, _isPotentialTrackingPoint,
             n=TRACK_PT_NUM, radius=RADIUS, a=ALPHA, b=BETA, c=GAMMA,
-            threshold=THRESHOLD, samplesize=SAMPLESIZE, certainty=CERTAINTY)
+            threshold=DYN_THRESHOLD, samplesize=SAMPLESIZE, certainty=CERTAINTY)
 
         # info(str(master.trackingpts))
+
+    @profile
+    def alphacv(self, img):
+        # This is an alternative computer vision algorithm proposed by Matthew
+        master = self.master
+        BLUR_FACTOR = master.values['BLUR']
+        TRACK_PT_NUM = master.values['PTS']
+        RADIUS = master.values['RADI']
+        ALPHA = master.values['A']
+        BETA = master.values['B']
+        GAMMA = 1 - ALPHA - BETA
+        THRESHOLD = master.values['THRS']
+        SAMPLESIZE = master.values['SIZE']
+        CERTAINTY = master.values['CERT']
+        # Do the image processing
+        # Generate grayscale image
+        grayimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # Blur image
+        blurred = findBlurred(grayimg, BLUR_FACTOR)
+
+        # The dynamic threshold calculation is embedded in algorithm
+        # TODO: Experiment to be done to determine the realibility of statistic
+
+        # Display necessary information on HUD
+
+        rols, cols, ch = img.shape
+        # Find tracking segments
+        interval = 15
+        pt_count = interval #min(TRACK_PT_NUM, interval)
+        pts = []
+        for i in xrange(pt_count):
+            # With the assumption that the mobot always turn left on turn:
+            # TODO: The turning decision is to made
+            row = V_HEIGHT - i * interval
+            result = processing.get_white_segments_from_row(blurred, row,
+                lo_rank = 10, hi_rank = 3)
+            midpt = (int(result[0][0]) + int(result[0][1])) / 2
+            pts.append((midpt, row))
+            for seg in result:
+                cv2.line(grayimg, (seg[0], row), (seg[1], row), (0, 0, 255),
+                    3)
+
+        master.cntframe = grayimg
+        master.trackingpts = pts
 
     def run(self):
         # Runs as separate thread
@@ -418,16 +481,24 @@ class ImageProcessor(threading.Thread):
                     if self.master.filterstate == 3:
                         # IRNV: invert color
                         img = cv2.bitwise_not(img)
+                        self.betacv(img)
 
-                    # img = data = np.fromstring(self.stream.getvalue(),
-                    #     dtype=np.uint8)
-                    self.betacv(img)
+                    elif self.master.filterstate == 4:
+                        self.alphacv(img)
 
-                    # Control the robot
-                    # self.vL = ???
-                    # self.vR = ???
-                except:
+                    elif self.master.filterstate == 6:
+                        # HYBRID
+                        # IRNV + ALPHACV
+                        img = cv2.bitwise_not(img)
+                        self.alphacv(img)
+
+                    else:
+                        self.betacv(img)
+
+                except Exception as inst:
+                    echoException()
                     warn("image processor exception, frame skipped")
+
                 finally:
                     # Reset the stream and event
                     self.stream.seek(0)
@@ -462,7 +533,8 @@ class MobotService(rpyc.Service):
             'BATT': 100, 'ADDR': LOCAL_ADDR
         }
 
-        self.cntframe = None
+        self.emptyfootage = np.zeros((V_HEIGHT, V_WIDTH), dtype = np.uint8)
+        self.cntframe = self.emptyfootage
         self.trackingpts = []
 
         self.vL = 0 # left speed
@@ -666,6 +738,7 @@ class MobotService(rpyc.Service):
             use_video_port=True)
 
     def calculateMobotMovement(self):
+        return (0,0)
         # Error is the offset of the bottom trackpoint from middle of frame
         if len(self.trackingpts) == 0: return (0, 0)
         err = self.trackingpts[0][0] - V_WIDTH / 2
@@ -682,8 +755,8 @@ class MobotService(rpyc.Service):
         # Drive is positive when turning left
         drive = pterm + iterm + dterm
 
-        lwheel = - (self.basespeed + drive / 2)
-        rwheel = - (self.basespeed - drive / 2)
+        lwheel = -(self.basespeed + drive / 2)
+        rwheel = -(self.basespeed - drive / 2)
 
         # Cap the wheel speeds to [-255, 255]
         lwheel = max(min(lwheel, 255), -255)
