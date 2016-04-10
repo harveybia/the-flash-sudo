@@ -1,4 +1,4 @@
-#from utils import init, info, warn, term2
+from utils import init, info, warn, term2
 import numpy as np
 import random
 import cv2
@@ -51,7 +51,7 @@ def get_gray(pic, sample_rows = 5, col_step = 5, rank = 5):
     return get_threshold(sample, rank)
 
 def get_white_segments_from_row(pic, row,
-        sample_rows = 5, buckets = 50, min_length = 20, max_gap = 4):
+        sample_rows = 10, buckets = 50, min_length = 10, max_gap = 4):
     # Get the white segments from the bottom few rows of a black/white picture
     # @params
     # row: (int) Normally should be larger than sample_rows
@@ -65,7 +65,11 @@ def get_white_segments_from_row(pic, row,
     sample = pic[max(0, row - sample_rows): row]
     bucket_size = (width - 1) / buckets + 1
     histogram = get_histogram(sample, buckets)
-    thereshold = get_threshold(histogram)
+    thereshold = new_get_grey(pic, row, sample_rows = sample_rows)
+    thereshold_old = get_threshold(histogram)
+    thereshold *= bucket_size * sample_rows
+    # print "thereshold:", thereshold
+    # print "old thereshold:", thereshold_old
     assert len(histogram) == buckets
     # Find the starts and ends for the white segments
     black_flag = True   # We start from black region
@@ -110,7 +114,8 @@ def get_white_segments_from_row(pic, row,
         else: i += 1
 
     if len(result) > 2:
-        print("More than 2 white lines detected, possible error!")
+        warn("More than 2 white lines detected, possible error!")
+        pass
     return result
 
 def get_histogram(A, buckets):
@@ -120,6 +125,7 @@ def get_histogram(A, buckets):
     # A: (list<list<int>>) the rows of numbers to sample
     # buckets: (int) the # of buckets
     assert A != []
+
     n = len(A[0])
     assert n > 0
     bucket_size = (n - 1) / buckets + 1
@@ -245,6 +251,40 @@ def overlap(s1, s2):
     return (s1[0] <= s2[0] and s1[1] >= s2[0]
         or s2[0] <= s1[0] and s2[1] >= s1[0])
 
+def get_image_histogram(img):
+    # Get the histogram of the image
+    # @params
+    # img: (List<list<int>>) the image
+    result = [0] * 256
+    for row in img:
+        for pixel in row:
+            result[pixel] += 1
+    return result
+
+def new_get_grey(img, row, sample_rows = 10, thereshold = 20):
+    # Get the prefect grey value by separating the rightmost peak in histogram
+    # @params
+    # row: (int) The row to sample
+    # sample_rows: (int) # of consecutive bottom rows to sample
+    # thereshold: (int) The most important param: when we increase bar 
+    # from x to x+1, if intersection with the histogram 
+    # decreases more than [thereshold], we get past a peak
+    sample = img[row - sample_rows:row]
+    histogram = get_image_histogram(sample)
+    bar = 1
+    index = None
+    new_index = None
+    while (index == None or 
+        index - new_index < thereshold) and bar <= max(histogram):
+        index = new_index
+        for i in xrange(255):
+            value = histogram[255 - i]
+            if value >= bar:
+                new_index = 255 - i
+                break
+        bar += 1
+    return (index + new_index) / 2
+
 ################################
 # test functions
 ################################
@@ -265,16 +305,16 @@ def test_perspective():
     plt.show()
 
 def test_get_line_segment():
-    img = cv2.imread('../tests/4.jpg')
+    img = cv2.imread('../tests/7.jpg')
     height, width = 300, 300
     img = cv2.resize(img,(width, height), interpolation = cv2.INTER_CUBIC)
     rows,cols,ch = img.shape
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-
+    img = cv2.GaussianBlur(img,(11,11),0)
     interval = 15
     for i in xrange(interval):
         row = height - i * interval
-        result = get_white_segments_from_row(img, row, min_length = 10)
+        result = get_white_segments_from_row(img, row)
         # print(result)
         for segment in result:
             cv2.line(img,(segment[0],row),(segment[1], row),(0,0,255),5)
@@ -298,20 +338,20 @@ def test_segment_node():
     assert(s1.graph_size == 3 and s2.graph_size == 3 and s3.graph_size == 3)
 
 def test_segment_tree():
-    img = cv2.imread('../tests/7.jpg')
+    img = cv2.imread('../tests/out.jpg')
     height, width = 300, 300
     img = cv2.resize(img,(width, height), interpolation = cv2.INTER_CUBIC)
     rows,cols,ch = img.shape
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-
+    img = cv2.bitwise_not(img)
     segments = []
     interval = 15
     rows = 20
     for i in xrange(rows):
         row = height - i * interval
-        result = get_white_segments_from_row(img, row, min_length = 10)
+        result = get_white_segments_from_row(img, row)
         for segment in result:
-            cv2.line(img,(segment[0],row),(segment[1], row),(0,0,255),5)
+            cv2.line(img,(segment[0],row), (segment[1], row),(0,0,255),5)
         segments.append(result)
 
     roots = link_segments(segments)
@@ -327,6 +367,29 @@ def test_segment_tree():
 
     plt.imshow(img, cmap = 'gray', interpolation = 'bicubic')
     plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
+    plt.show()
+
+def test_new_get_grey():
+    img = cv2.imread('../tests/1.jpg')
+    height, width = 300, 300
+    img = cv2.resize(img,(width, height), interpolation = cv2.INTER_CUBIC)
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    blur = cv2.GaussianBlur(img,(11,11),0)
+    rows,cols = img.shape
+   #plt.subplot(1,4,1),plt.hist(img)
+    #n, bins, patches = plt.hist(blur, 20)
+    #print n[0]
+    #print bins
+    #print patches
+    #plt.subplot(1,4,2),plt.hist(blur, 20)
+    plt.subplot(1,4,3),plt.imshow(blur, cmap = 'gray')
+    row = 200
+    sample = blur[row - 10:row]
+    thereshold = new_get_grey(blur, row)
+    print thereshold
+    ret,thresh1 = cv2.threshold(blur,thereshold,255,cv2.THRESH_BINARY)
+    plt.subplot(1,4,4),plt.plot(get_image_histogram(sample))
+    plt.subplot(1,4,1),plt.imshow(thresh1,'gray')
     plt.show()
 
 def test(): pass
