@@ -755,8 +755,8 @@ class MobotService(rpyc.Service):
         # Drive is positive when turning left
         drive = pterm + iterm + dterm
 
-        lwheel = -(self.basespeed + drive / 2)
-        rwheel = -(self.basespeed - drive / 2)
+        lwheel = -(self.basespeed + drive)
+        rwheel = -(self.basespeed - drive)
 
         # Cap the wheel speeds to [-255, 255]
         lwheel = max(min(lwheel, 255), -255)
