@@ -461,7 +461,6 @@ class ImageProcessor(threading.Thread):
 
         # Display necessary information on HUD
 
-        rols, cols, ch = img.shape
         # Find tracking segments
         interval = 15
         pt_count = 10 #min(TRACK_PT_NUM, interval)
