@@ -487,8 +487,8 @@ class Interface(Application):
     def drawPtStatistics(self, canvas, pt, basis=(0,-1), prob=60):
         canvas.create_oval(pt[0]-2, pt[1]-2, pt[0]+2, pt[1]+2,
             outline="aquamarine")
-        canvas.create_text((pt[0]+5, pt[1]), anchor='w', text="%d%%"%prob,
-            font=("Airborne", 10), fill='aquamarine')
+        # canvas.create_text((pt[0]+5, pt[1]), anchor='w', text="%d%%"%prob,
+        #     font=("Airborne", 10), fill='aquamarine')
         canvas.create_line(pt[0], pt[1], pt[0]+basis[0], pt[1]+basis[1],
             fill="red", width=1, arrow=LAST)
 
