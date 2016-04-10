@@ -65,7 +65,7 @@ def get_white_segments_from_row(pic, row,
     sample = pic[max(0, row - sample_rows): row]
     bucket_size = (width - 1) / buckets + 1
     histogram = get_histogram(sample, buckets)
-    thereshold = new_get_grey(pic, row, sample_rows = sample_rows)
+    thereshold = new_get_gray(pic, row, sample_rows = sample_rows)
     thereshold_old = get_threshold(histogram)
     thereshold *= bucket_size * sample_rows
     # print "thereshold:", thereshold
@@ -262,20 +262,20 @@ def get_image_histogram(img):
             result[pixel] += 1
     return result
 
-def new_get_grey(img, row, sample_rows = 10, thereshold = 20):
+def new_get_gray(img, row, sample_rows = 10, thereshold = 20):
     # Get the prefect grey value by separating the rightmost peak in histogram
     # @params
     # row: (int) The row to sample
     # sample_rows: (int) # of consecutive bottom rows to sample
-    # thereshold: (int) The most important param: when we increase bar 
-    # from x to x+1, if intersection with the histogram 
+    # thereshold: (int) The most important param: when we increase bar
+    # from x to x+1, if intersection with the histogram
     # decreases more than [thereshold], we get past a peak
     sample = img[row - sample_rows:row]
     histogram = get_image_histogram(sample)
     bar = 1
     index = None
     new_index = None
-    while (index == None or 
+    while (index == None or
         index - new_index < thereshold) and bar <= max(histogram):
         index = new_index
         for i in xrange(255):
@@ -370,7 +370,7 @@ def test_segment_tree():
     plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
     plt.show()
 
-def test_new_get_grey():
+def test_new_get_gray():
     img = cv2.imread('../tests/1.jpg')
     height, width = 300, 300
     img = cv2.resize(img,(width, height), interpolation = cv2.INTER_CUBIC)
@@ -386,7 +386,7 @@ def test_new_get_grey():
     plt.subplot(1,4,3),plt.imshow(blur, cmap = 'gray')
     row = 200
     sample = blur[row - 10:row]
-    thereshold = new_get_grey(blur, row)
+    thereshold = new_get_gray(blur, row)
     print thereshold
     ret,thresh1 = cv2.threshold(blur,thereshold,255,cv2.THRESH_BINARY)
     plt.subplot(1,4,4),plt.plot(get_image_histogram(sample))
