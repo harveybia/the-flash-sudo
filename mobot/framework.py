@@ -141,7 +141,7 @@ def cropImage(img, exc_up, exc_down, exc_l, exc_r, tgt_w, tgt_h):
     assert(exc_up > 0 and exc_down > 0 and exc_l > 0 and exc_r > 0)
     assert(exc_up + exc_down < 1 and exc_l + exc_r < 1)
     print img.shape
-    row, col = img.shape
+    row, col, ch = img.shape
     x = int(col * exc_l)
     y = int(row * exc_up)
     w = int(col - col * exc_r)
