@@ -80,6 +80,12 @@ CAMERA = picamera.PiCamera()
 V_WIDTH, V_HEIGHT = 320, 240
 FRAMERATE = 5
 
+# Const:
+VERT_EXC_UP = 0.48
+VERT_EXC_DOWN = 0.07
+HORI_EXC_L = 0.24
+HORI_EXC_R = 0.24
+
 # Service configuration
 LOCAL_ADDR = socket.getfqdn()
 MOBOT_PORT = 15112
@@ -129,6 +135,18 @@ def profile(fn):
         # info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
         return ret
     return with_profiling
+
+def cropImage(img, exc_up, exc_down, exc_l, exc_r, tgt_w, tgt_h):
+    # Refer to design notebook for parameter documentation
+    assert(exc_up > 0 and exc_down > 0 and exc_l > 0 and exc_r > 0)
+    assert(exc_up + exc_down < 1 and exc_l + exc_r < 1)
+    print img.shape
+    row, col = img.shape
+    x = int(col * exc_l)
+    y = int(row * exc_up)
+    w = int(col - col * exc_r)
+    h = int(row - row * exc_down)
+    return cv2.resize(img[y:h, x:w], dsize = (tgt_w, tgt_h))
 
 def grayToRGB(img):
     # Converts grayscale image into RGB
@@ -447,7 +465,7 @@ class ImageProcessor(threading.Thread):
 
         rols, cols, ch = img.shape
         # Find tracking segments
-        interval = 15
+        interval = 5
         pt_count = interval #min(TRACK_PT_NUM, interval)
         pts = []
         for i in xrange(pt_count):
@@ -484,6 +502,9 @@ class ImageProcessor(threading.Thread):
                         self.betacv(img)
 
                     elif self.master.filterstate == 4:
+                        img = cropImage(img, VERT_EXC_UP, VERT_EXC_DOWN,
+                            HORI_EXC_L, HORI_EXC_R,
+                            tgt_w = V_WIDTH, tgt_h = V_HEIGHT)
                         self.alphacv(img)
 
                     elif self.master.filterstate == 6:
