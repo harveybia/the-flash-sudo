@@ -295,30 +295,48 @@ def new_get_gray(img, row, sample_rows = 10, thereshold = 20):
         bar += 1
     return (index + new_index) / 2
 
-def get_good_pts(img, display, interval = 15, pt_count = 10, max_length = 1500, 
-        max_segments = 4):
-    rows, cols = img.shape
-
+def get_good_pts(grayimg, display, sample_rows = 5, 
+        interval = 15, pt_count = 10, 
+        max_length = 0.5, max_segments = 4):
+    # Get the white segments from picture and filter bad points
+    # Currently returns a list of only the most reasonable tracking point
+    # @params
+    # grayimg: (List<List<int>>) The image to process (gray and blurred)
+    # display: (List<List<int>>) The image we want to display (not blurred)
+    # sample_rows: (int) The # of adjacent rows to sample 
+    # for a certain row of segments
+    # interval: (int) The interval between rows sampled
+    # pt_count: (int) The # of rows to sample
+    # max_segments: (int) The maximum number of segments a row can have
+    # If one row have more segments, it is rendered invalid
+    # max_length: (int) max_length * row is the maximum length a 
+    # valid segment can have at a certain row
+    rows, cols = grayimg.shape
     # Find tracking segments
     pts = []
     segments = []
     for i in xrange(pt_count):
         # With the assumption that the mobot always turn left on turn:
-        # TODO: The turning decision is to made
+        # TODO: The turning decision is to be made
         row = cols - i * interval
-        result = get_white_segments_from_row(img, row)
+        result = get_white_segments_from_row(grayimg, row, 
+            sample_rows = sample_rows)
         good_results = []
         if result != [] and len(result) <= max_segments:
             for seg in result:
-                if seg[1] - seg[0] < max_length:
+                if seg[1] - seg[0] < max_length * row:
                     cv2.line(display, (seg[0], row), 
                         (seg[1], row), (0, 0, 255), 3)
                     good_results.append(seg)
             if good_results != []: segments.append(good_results)
-
+    # For safety
     if segments == []:
         print "Warning! No good segments detected!"
         return display, [(cols / 2, rows)]   # Center point of image...
+    # Build segment "tree" out of segments
+    # Get rid of small trees
+    # Return the x coord of the most reasonable point to track
+    # Which is the root with the minimum height
     roots = link_segments(segments)
     largest_tree = set()
     largest_size = 0
@@ -459,16 +477,16 @@ def test_node():
     print "Passed!"
 
 def test_get_good_pts():
-    img = cv2.imread('../tests/14.jpg')
+    img = cv2.imread('../tests/11.jpg')
     height, width = 300, 300
     img = cv2.resize(img,(width, height), interpolation = cv2.INTER_CUBIC)
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     img = cv2.GaussianBlur(img,(11,11),0)
-    img, pts = get_good_pts(img)
+    img, pts = get_good_pts(img, img, pt_count = 20)
     print pts[0]
     plt.imshow(img, cmap = 'gray', interpolation = 'bicubic')
     plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
     plt.show()
 
 if __name__ == '__main__':
-    test()
+    test_get_good_pts()
