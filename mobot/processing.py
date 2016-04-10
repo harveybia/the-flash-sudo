@@ -30,6 +30,15 @@ class SegmentNode(object):
         for node in self.prev:
             node.set_graph_size(size)
 
+    def get_hashables(self):
+        return (self.segment[0], self.segment[1], self.height)
+
+    def __hash__(self):
+        return hash(self.get_hashables())
+
+    def __eq__(self, other):
+        return self.segment == other.segment and self.height == other.height
+
     def is_root(self):
         return len(self.prev) == 0
 
@@ -66,7 +75,7 @@ def get_white_segments_from_row(pic, row,
     bucket_size = (width - 1) / buckets + 1
     histogram = get_histogram(sample, buckets)
     thereshold = new_get_gray(pic, row, sample_rows = sample_rows)
-    thereshold_old = get_threshold(histogram)
+    #thereshold_old = get_threshold(histogram)
     thereshold *= bucket_size * sample_rows
     # print "thereshold:", thereshold
     # print "old thereshold:", thereshold_old
@@ -252,13 +261,14 @@ def overlap(s1, s2):
     return (s1[0] <= s2[0] and s1[1] >= s2[0]
         or s2[0] <= s1[0] and s2[1] >= s1[0])
 
-def get_image_histogram(img):
+def get_image_histogram(img, step = 2):
     # Get the histogram of the image
     # @params
     # img: (List<list<int>>) the image
     result = [0] * 256
     for row in img:
-        for pixel in row:
+        for i in xrange(0, len(row), step):
+            pixel = row[i]
             result[pixel] += 1
     return result
 
@@ -285,6 +295,47 @@ def new_get_gray(img, row, sample_rows = 10, thereshold = 20):
                 break
         bar += 1
     return (index + new_index) / 2
+
+def get_good_pts(img, interval = 15, pt_count = 10, max_length = 1500, 
+        max_segments = 4):
+    rows, cols = img.shape
+
+    # Find tracking segments
+    pts = []
+    segments = []
+    for i in xrange(pt_count):
+        # With the assumption that the mobot always turn left on turn:
+        # TODO: The turning decision is to made
+        row = cols - i * interval
+        result = get_white_segments_from_row(img, row)
+        good_results = []
+        if result != [] and len(result) <= max_segments:
+            for seg in result:
+                if seg[1] - seg[0] < max_length:
+                    cv2.line(img, (seg[0], row), 
+                        (seg[1], row), (0, 0, 255), 3)
+                    good_results.append(seg)
+            if good_results != []: segments.append(good_results)
+
+    if segments == []:
+        print "Warning! No good segments detected!"
+        return img, [(cols / 2, rows)]   # Center point of image...
+    roots = link_segments(segments)
+    largest_tree = set()
+    largest_size = 0
+    for root in roots:
+        if root.graph_size > largest_size:
+            largest_size = root.graph_size
+            largest_tree = set([root])
+        elif root.graph_size == largest_size:
+            largest_tree.add(root)
+    min_height = None
+    point = None
+    for root in largest_tree:
+        if min_height == None or root.height < min_height:
+            min_height = root.height
+            point = (root.center, rows - root.height)
+    return img, [point]
 
 ################################
 # test functions
@@ -393,7 +444,32 @@ def test_new_get_gray():
     plt.subplot(1,4,1),plt.imshow(thresh1,'gray')
     plt.show()
 
-def test(): pass
+def test_node():
+    print "Testing SegmentNode..."
+    s1 = SegmentNode((0,0),1)
+    s2 = SegmentNode((1,1),2)
+    s3 = SegmentNode((1,1),2)
+    set1 = set()
+    set1.add(s1)
+    assert s1 in set1
+    assert s2 not in set1
+    set1.add(s2)
+    assert s1 in set1
+    assert s2 in set1
+    assert s3 in set1
+    print "Passed!"
+
+def test_get_good_pts():
+    img = cv2.imread('../tests/14.jpg')
+    height, width = 300, 300
+    img = cv2.resize(img,(width, height), interpolation = cv2.INTER_CUBIC)
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    img = cv2.GaussianBlur(img,(11,11),0)
+    img, pts = get_good_pts(img)
+    print pts[0]
+    plt.imshow(img, cmap = 'gray', interpolation = 'bicubic')
+    plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
+    plt.show()
 
 if __name__ == '__main__':
     test()
