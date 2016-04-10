@@ -295,7 +295,7 @@ def new_get_gray(img, row, sample_rows = 10, thereshold = 20):
         bar += 1
     return (index + new_index) / 2
 
-def get_good_pts(img, interval = 15, pt_count = 10, max_length = 1500, 
+def get_good_pts(img, display, interval = 15, pt_count = 10, max_length = 1500, 
         max_segments = 4):
     rows, cols = img.shape
 
@@ -311,14 +311,14 @@ def get_good_pts(img, interval = 15, pt_count = 10, max_length = 1500,
         if result != [] and len(result) <= max_segments:
             for seg in result:
                 if seg[1] - seg[0] < max_length:
-                    cv2.line(img, (seg[0], row), 
+                    cv2.line(display, (seg[0], row), 
                         (seg[1], row), (0, 0, 255), 3)
                     good_results.append(seg)
             if good_results != []: segments.append(good_results)
 
     if segments == []:
         print "Warning! No good segments detected!"
-        return img, [(cols / 2, rows)]   # Center point of image...
+        return display, [(cols / 2, rows)]   # Center point of image...
     roots = link_segments(segments)
     largest_tree = set()
     largest_size = 0
@@ -334,7 +334,7 @@ def get_good_pts(img, interval = 15, pt_count = 10, max_length = 1500,
         if min_height == None or root.height < min_height:
             min_height = root.height
             point = (root.center, rows - root.height)
-    return img, [point]
+    return display, [point]
 
 ################################
 # test functions
