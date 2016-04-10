@@ -597,7 +597,7 @@ class MobotService(rpyc.Service):
         self.basespeed = 100
         self.errorsum = 0
         self.preverr = 0
-        self.p = 1
+        self.p = 0.5
         self.i = 0
         self.d = 1
 
@@ -773,7 +773,7 @@ class MobotService(rpyc.Service):
         self.preverr = err
         # Drive is the difference in speed between two wheels
         # Drive is positive when turning left
-        drive = pterm + iterm + dterm
+        drive = int(pterm + iterm + dterm)
 
         lwheel = -(self.basespeed - drive)
         rwheel = -(self.basespeed + drive)
