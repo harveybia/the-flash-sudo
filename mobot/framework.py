@@ -419,8 +419,7 @@ class ImageProcessor(threading.Thread):
         blurred = findBlurred(grayimg, BLUR_FACTOR)
 
         # Find dynamic threshold for image
-        DYN_THRESHOLD = processing.get_gray(blurred, sample_rows = 20,
-            col_step = 5, rank = 5)
+        DYN_THRESHOLD = processing.new_get_gray(blurred, row = V_HEIGHT - 1)
 
         # Display necessary information on HUD
         cv2.putText(grayimg, "THRESHOLD: %d"%DYN_THRESHOLD, (5, 5),
@@ -464,8 +463,8 @@ class ImageProcessor(threading.Thread):
 
         rols, cols, ch = img.shape
         # Find tracking segments
-        interval = 5
-        pt_count = interval #min(TRACK_PT_NUM, interval)
+        interval = 15
+        pt_count = 10 #min(TRACK_PT_NUM, interval)
         pts = []
         for i in xrange(pt_count):
             # With the assumption that the mobot always turn left on turn:
