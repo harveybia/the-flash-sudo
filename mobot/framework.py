@@ -574,7 +574,7 @@ class MobotService(rpyc.Service):
         self.pool = [] # Pool of Image Processors
 
         # PID Control Variable
-        self.basespeed = 200
+        self.basespeed = 150
         self.errorsum = 0
         self.preverr = 0
         self.p = 5
