@@ -138,7 +138,7 @@ def profile(fn):
 
 def cropImage(img, exc_up, exc_down, exc_l, exc_r, tgt_w, tgt_h):
     # Refer to design notebook for parameter documentation
-    assert(exc_up > 0 and exc_down > 0 and exc_l > 0 and exc_r > 0)
+    assert(exc_up >= 0 and exc_down >= 0 and exc_l >= 0 and exc_r >= 0)
     assert(exc_up + exc_down < 1 and exc_l + exc_r < 1)
     row, col, ch = img.shape
     x = int(col * exc_l)
