@@ -454,8 +454,7 @@ class ImageProcessor(threading.Thread):
             # With the assumption that the mobot always turn left on turn:
             # TODO: The turning decision is to made
             row = V_HEIGHT - i * interval
-            result = processing.get_white_segments_from_row(blurred, row,
-                lo_rank = 10, hi_rank = 3)
+            result = processing.get_white_segments_from_row(blurred, row)
             midpt = (int(result[0][0]) + int(result[0][1])) / 2
             pts.append((midpt, row))
             for seg in result:
