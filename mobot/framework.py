@@ -455,11 +455,12 @@ class ImageProcessor(threading.Thread):
             # TODO: The turning decision is to made
             row = V_HEIGHT - i * interval
             result = processing.get_white_segments_from_row(blurred, row)
-            midpt = (int(result[0][0]) + int(result[0][1])) / 2
-            pts.append((midpt, row))
-            for seg in result:
-                cv2.line(grayimg, (seg[0], row), (seg[1], row), (0, 0, 255),
-                    3)
+            if result != []:
+                midpt = (int(result[0][0]) + int(result[0][1])) / 2
+                pts.append((midpt, row))
+                for seg in result:
+                    cv2.line(grayimg, (seg[0], row), (seg[1], row), (0, 0, 255),
+                        3)
 
         master.cntframe = grayimg
         master.trackingpts = pts
