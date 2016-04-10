@@ -464,7 +464,7 @@ class ImageProcessor(threading.Thread):
         # Find tracking segments
         interval = 15
         pt_count = 10 #min(TRACK_PT_NUM, interval)
-        grayimg, pts = processing.get_good_pts(img, grayimg, 
+        grayimg, pts = processing.get_good_pts(blurred, grayimg,
             interval = interval, pt_count = pt_count)
 
         master.cntframe = grayimg
