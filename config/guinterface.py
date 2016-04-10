@@ -513,18 +513,14 @@ class Interface(Application):
                 np.fromstring(self.conn.root.getMobotVision(),
                     dtype=np.uint8).reshape((V_HEIGHT, V_WIDTH))
                 )
-            # canvas.create_image(70,140,anchor=NW,image=self.image)
+            canvas.create_image(70,140,anchor=NW,image=self.image)
 
 
-
-        else:
-            self.image = _grayToTkImage(
-                np.fromstring(self.conn.root.getMobotVision(),
-                    dtype=np.uint8).reshape((V_HEIGHT, V_WIDTH))
-                )
             im = array(Image.open(self.image).convert('L'))
             im2,cdf = imtools.histeq(im)
             canvas.create_image(70,140,anchor=NW,image=im2)
+
+        else:
             # Draw 'No Signal on canvas'
             pass
 
