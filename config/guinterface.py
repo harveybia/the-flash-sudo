@@ -15,7 +15,7 @@ import numpy as np
 from Tkinter import *
 from PIL import Image, ImageTk
 
-MOBOT_ADDR = "128.237.185.202"
+MOBOT_ADDR = "128.237.177.201"
 MOBOT_PORT = 15112
 VIDEO_PORT = 20000
 ADDR, PORT = 'localhost', 15251
@@ -513,6 +513,12 @@ class Interface(Application):
                     dtype=np.uint8).reshape((V_HEIGHT, V_WIDTH))
                 )
             canvas.create_image(70,140,anchor=NW,image=self.image)
+
+
+            im = array(Image.open(self.image).convert('L'))
+            im2,cdf = imtools.histeq(im)
+            canvas.create_image(70,140,anchor=NW,image=im2)
+
         else:
             # Draw 'No Signal on canvas'
             pass

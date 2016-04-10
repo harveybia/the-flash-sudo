@@ -126,7 +126,7 @@ def profile(fn):
         start_time = time.time()
         ret = fn(*args, **kwargs)
         elapsed_time = time.time() - start_time
-        #info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
+        # info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
         return ret
     return with_profiling
 
@@ -444,24 +444,25 @@ class ImageProcessor(threading.Thread):
         # TODO: Experiment to be done to determine the realibility of statistic
 
         # Display necessary information on HUD
-        cv2.putText(grayimg, "DYN ALPHACV IN SESSION", (5, 5),
-            cv2.FONT_HERSHEY_SIMPLEX, 12, (0, 255, 0))
 
         rols, cols, ch = img.shape
         # Find tracking segments
         interval = 15
-        segments = [[],] * interval
-        pts = [[0,0],] * min(TRACK_PT_NUM, interval)
-        for i in xrange(min(TRACK_PT_NUM, interval)):
+        pt_count = interval #min(TRACK_PT_NUM, interval)
+        pts = []
+        for i in xrange(pt_count):
             # With the assumption that the mobot always turn left on turn:
             # TODO: The turning decision is to made
             row = V_HEIGHT - i * interval
-            segments[i] = processing.get_white_segments_from_row(blurred, row)
-            pts[i][0] = row
-            pts[i][1] = (segments[i][0][0] + segments[i][0][1]) / 2
-            cv2.line(grayimg, (segments[i][0][0], row),
-                (segments[i][0][1], row), (0, 0, 255), 3)
+            result = processing.get_white_segments_from_row(blurred, row,
+                lo_rank = 10, hi_rank = 3)
+            midpt = (int(result[0][0]) + int(result[0][1])) / 2
+            pts.append((midpt, row))
+            for seg in result:
+                cv2.line(grayimg, (seg[0], row), (seg[1], row), (0, 0, 255),
+                    3)
 
+        master.cntframe = grayimg
         master.trackingpts = pts
 
     def run(self):
@@ -480,9 +481,17 @@ class ImageProcessor(threading.Thread):
                     if self.master.filterstate == 3:
                         # IRNV: invert color
                         img = cv2.bitwise_not(img)
+                        self.betacv(img)
 
-                    if self.master.filterstate == 4:
+                    elif self.master.filterstate == 4:
                         self.alphacv(img)
+
+                    elif self.master.filterstate == 6:
+                        # HYBRID
+                        # IRNV + ALPHACV
+                        img = cv2.bitwise_not(img)
+                        self.alphacv(img)
+
                     else:
                         self.betacv(img)
 
@@ -729,6 +738,7 @@ class MobotService(rpyc.Service):
             use_video_port=True)
 
     def calculateMobotMovement(self):
+        return (0,0)
         # Error is the offset of the bottom trackpoint from middle of frame
         if len(self.trackingpts) == 0: return (0, 0)
         err = self.trackingpts[0][0] - V_WIDTH / 2
@@ -745,8 +755,8 @@ class MobotService(rpyc.Service):
         # Drive is positive when turning left
         drive = pterm + iterm + dterm
 
-        lwheel = self.basespeed - drive / 2
-        rwheel = self.basespeed + drive / 2
+        lwheel = -(self.basespeed + drive / 2)
+        rwheel = -(self.basespeed - drive / 2)
 
         # Cap the wheel speeds to [-255, 255]
         lwheel = max(min(lwheel, 255), -255)

@@ -48,7 +48,7 @@ def get_gray(pic, sample_rows = 5, col_step = 5, rank = 5):
             pixel = row[j]
             sample.append(pixel)
     # print(sample)
-    return get_threshold(sample, rank)
+    return get_threshold(sample)
 
 def get_white_segments_from_row(pic, row,
         sample_rows = 10, buckets = 50, min_length = 10, max_gap = 4):
@@ -114,7 +114,7 @@ def get_white_segments_from_row(pic, row,
         else: i += 1
 
     if len(result) > 2:
-        warn("More than 2 white lines detected, possible error!")
+        #warn("More than 2 white lines detected, possible error!")
         pass
     return result
 
@@ -138,18 +138,19 @@ def get_histogram(A, buckets):
             result[bucket] += row[i]
     return result
 
-def get_threshold(l, rank = 2):
+def get_threshold(l, hi_rank = 2, lo_rank = 2):
     # Get the mid(separator) value from a list of integers
     # @params
     # l: (list<int>) the list of integers
     # rank: (int) discard the top *rank* highest/lowest entries
+    rank = max(lo_rank, hi_rank)
     assert rank > 0
     if len(l) < rank:
         warn("List too short for rank!")
         rank = len(l)
     sorted_list = sorted(l)
-    lo = sorted_list[rank - 1]
-    hi = sorted_list[len(l) - rank]
+    lo = sorted_list[lo_rank - 1]
+    hi = sorted_list[len(l) - hi_rank]
     return (int(lo) + int(hi)) / 2
 
 def gen_segment_nodes(all_segments):
@@ -363,7 +364,7 @@ def test_segment_tree():
     split = get_split(roots)
     if split != None: split = split.height * interval
     print "Converge: ", converge
-    print "Split: ", split    
+    print "Split: ", split
 
     plt.imshow(img, cmap = 'gray', interpolation = 'bicubic')
     plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
