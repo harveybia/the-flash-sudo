@@ -83,8 +83,8 @@ FRAMERATE = 5
 # Const:
 VERT_EXC_UP = 0.48
 VERT_EXC_DOWN = 0.07
-HORI_EXC_L = 0.24
-HORI_EXC_R = 0.24
+HORI_EXC_L = 0.10
+HORI_EXC_R = 0.10
 
 # Service configuration
 LOCAL_ADDR = socket.getfqdn()
