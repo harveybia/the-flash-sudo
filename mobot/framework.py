@@ -577,9 +577,9 @@ class MobotService(rpyc.Service):
         self.basespeed = 100
         self.errorsum = 0
         self.preverr = 0
-        self.p = 1
-        self.i = 0
-        self.d = 0
+        self.p = 5
+        self.i = 1
+        self.d = 1
 
     @staticmethod
     def yieldstreams(scv):
