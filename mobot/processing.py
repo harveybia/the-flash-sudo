@@ -66,7 +66,7 @@ def get_white_segments_from_row(pic, row,
     bucket_size = (width - 1) / buckets + 1
     histogram = get_histogram(sample, buckets)
     thereshold = new_get_gray(pic, row, sample_rows = sample_rows)
-    thereshold_old = get_threshold(histogram)
+    # thereshold_old = get_threshold(histogram)
     thereshold *= bucket_size * sample_rows
     # print "thereshold:", thereshold
     # print "old thereshold:", thereshold_old
