@@ -469,15 +469,21 @@ class ImageProcessor(threading.Thread):
         for i in xrange(pt_count):
             # With the assumption that the mobot always turn left on turn:
             # TODO: The turning decision is to made
+            # Resolution (temporary): to choose the points that are near the
+            # mid point of vision
             row = V_HEIGHT - i * interval
             result = processing.get_white_segments_from_row(blurred, row,
                 sample_rows = 5)
             if result != []:
-                midpt = (int(result[0][0]) + int(result[0][1])) / 2
-                pts.append((midpt, row))
+                best_pt = ((int(result[0][0]) + int(result[0][1])) / 2, row)
                 for seg in result:
+                    # Filter point closest to midpoint (x)
+                    pt_x = (int(seg[0]) + int(seg[1])) / 2
+                    if abs(pt_x - V_WIDTH/2) < abs(best_pt[0] - V_WIDTH/2):
+                        best_pt = (pt_x, row)
                     cv2.line(grayimg, (seg[0], row), (seg[1], row), (0, 0, 255),
                         3)
+                pts.append(best_pt)
 
         master.cntframe = grayimg
         master.trackingpts = pts
