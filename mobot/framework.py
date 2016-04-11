@@ -476,40 +476,6 @@ class ImageProcessor(threading.Thread):
         # self.master.done = True
         while not self.terminated:
             if self.event.wait(1):
-                self.stream.seek(0)
-                # Do the image processing
-                img = Image.open(self.stream).convert('RGB')
-                img = np.array(img)
-                img = img[:, :, ::-1].copy()
-
-                if self.master.filterstate == 3:
-                    # IRNV: invert color
-                    img = cv2.bitwise_not(img)
-                    self.betacv(img)
-
-                elif self.master.filterstate == 4:
-                    img = cropImage(img, VERT_EXC_UP, VERT_EXC_DOWN,
-                        HORI_EXC_L, HORI_EXC_R,
-                        tgt_w = V_WIDTH, tgt_h = V_HEIGHT)
-                    self.alphacv(img)
-
-                elif self.master.filterstate == 6:
-                    # HYBRID
-                    # IRNV + ALPHACV
-                    img = cv2.bitwise_not(img)
-                    self.alphacv(img)
-
-                else:
-                    self.betacv(img)
-
-                # Reset the stream and event
-                self.stream.seek(0)
-                self.stream.truncate()
-                self.event.clear()
-                # Return to pool for next frame
-                with self.master.lock:
-                    self.master.pool.append(self)
-                """
                 try:
                     self.stream.seek(0)
                     # Do the image processing
@@ -549,7 +515,6 @@ class ImageProcessor(threading.Thread):
                     # Return to pool for next frame
                     with self.master.lock:
                         self.master.pool.append(self)
-                """
 
 class MobotService(rpyc.Service):
     def __init__(self, *args, **kwargs):
