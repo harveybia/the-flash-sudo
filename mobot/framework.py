@@ -885,3 +885,4 @@ if __name__ == "__main__":
         mobot.startMission(join=True)
         # An offline version will not terminate
         # TODO: add state machine to tackle loops, and terminate the movement
+        CAMERA.close()
