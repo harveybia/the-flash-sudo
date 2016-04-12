@@ -690,52 +690,57 @@ class MobotFramework(object):
         # Mobot hardware update loop
         # self.alphacv() # Removed: Image Processing doesnt happen here anymore
         while not stop_event.is_set():
-            self.touchcount = abs(self.touchcount - 1)
-            BrickPi.MotorSpeed[L] = self.vL
-            BrickPi.MotorSpeed[L1] = self.vL
-            BrickPi.MotorSpeed[R] = self.vR
-            BrickPi.MotorSpeed[R1] = self.vR
-            result = BrickPiUpdateValues()
-            if not result:
-                # Successfully updated values
-                # Read touch sensor values
-                if BrickPi.Sensor[S2]:
-                    # Prevent signal disturbances
-                    threshold = int(28 - self.values['TCHS'] * 20)
-                    self.touchcount += 2
-                    if self.touchcount > threshold:
-                        # Increment gates count
-                        self.status['GATC'] += 1
-                        # Reset signal strength
-                        self.touchcount = 0
-                # Update encoder values
-                self.encL = BrickPi.Encoder[L]
-                self.encR = BrickPi.Encoder[R]
+            try:
+                self.touchcount = abs(self.touchcount - 1)
+                BrickPi.MotorSpeed[L] = self.vL
+                BrickPi.MotorSpeed[L1] = self.vL
+                BrickPi.MotorSpeed[R] = self.vR
+                BrickPi.MotorSpeed[R1] = self.vR
+                result = BrickPiUpdateValues()
+                if not result:
+                    # Successfully updated values
+                    # Read touch sensor values
+                    if BrickPi.Sensor[S2]:
+                        # Prevent signal disturbances
+                        threshold = int(28 - self.values['TCHS'] * 20)
+                        self.touchcount += 2
+                        if self.touchcount > threshold:
+                            # Increment gates count
+                            self.status['GATC'] += 1
+                            # Reset signal strength
+                            self.touchcount = 0
+                    # Update encoder values
+                    self.encL = BrickPi.Encoder[L]
+                    self.encR = BrickPi.Encoder[R]
 
-            speeds = self.calculateMobotMovement()
-            self._setMotorSpeed(speeds[0], speeds[1])
-            self._updateStatus()
+                speeds = self.calculateMobotMovement()
+                self._setMotorSpeed(speeds[0], speeds[1])
+                self._updateStatus()
 
-            # Update Terminal Feedback
-            # Should be disabled for safety considerations -> STABLE_MODE
-            if term2 != None and not STABLE_MODE:
-                c = term2.scr.getch()
-                if c == 410:
-                    info("@terminal: resize event")
-                    term2.resizeAll()
-                term2.refreshAll()
+                # Update Terminal Feedback
+                # Should be disabled for safety considerations -> STABLE_MODE
+                if term2 != None and not STABLE_MODE:
+                    c = term2.scr.getch()
+                    if c == 410:
+                        info("@terminal: resize event")
+                        term2.resizeAll()
+                    term2.refreshAll()
+            except KeyboardInterrupt:
+                self.stopMission()
 
     def startMission(self, join=False):
         # Warning: join in to be enabled for standalone version
         # because no main thread would be present
+        info('mission started')
         self.loopstop.clear()
         self.hardwarestop.clear()
         self.done = False
         self.loopthd.start()
         self.hardwarethd.start()
-        if join: self.loopthd.join()
+        if join: self.hardwarethd.join()
 
     def stopMission(self):
+        info('mission exited')
         self.done = True
         self.loopstop.set()
         self.hardwarestop.set()
