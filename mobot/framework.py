@@ -725,12 +725,15 @@ class MobotFramework(object):
                     term2.resizeAll()
                 term2.refreshAll()
 
-    def startMission(self):
+    def startMission(self, join=False):
+        # Warning: join in to be enabled for standalone version
+        # because no main thread would be present
         self.loopstop.clear()
         self.hardwarestop.clear()
         self.done = False
         self.loopthd.start()
         self.hardwarethd.start()
+        if join: self.loopthd.join()
 
     def stopMission(self):
         self.done = True
@@ -879,6 +882,6 @@ if __name__ == "__main__":
         # Initialize offline instance
         mobot = MobotFramework()
         mobot.setFilterState(f_state)
-        mobot.startMission()
+        mobot.startMission(join=True)
         # An offline version will not terminate
         # TODO: add state machine to tackle loops, and terminate the movement
