@@ -1,7 +1,7 @@
-####################################
-#  Standalone Test Trial Sequence  #
-# copyright 2015-2016 Harvey Shi   #
-####################################
+#####################################
+# Core Algorithm and Mobot Platform #
+# copyright 2015-2016 Harvey Shi    #
+#####################################
 flash = \
 """
   __  .__                       _____.__                .__
@@ -14,6 +14,7 @@ _/  |_|  |__   ____           _/ ____\  | _____    _____|  |__
 
 import io
 import cv2
+import sys
 import time
 import math
 import rpyc
@@ -21,9 +22,12 @@ import struct
 import socket
 import picamera
 import threading
+import linecache
+import processing
 import numpy as np
 from PIL import Image
 from BrickPi import *
+
 from utils import init, info, warn, term2
 
 STABLE_MODE = True
@@ -49,6 +53,16 @@ class ParameterInvalidException(Exception):
     def __str__(self):
         return repr(self.des)
 
+def echoException():
+    exc_type, exc_obj, tb = sys.exc_info()
+    f = tb.tb_frame
+    lineno = tb.tb_lineno
+    filename = f.f_code.co_filename
+    linecache.checkcache(filename)
+    line = linecache.getline(filename, lineno, f.f_globals)
+    print 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(
+        filename, lineno, line.strip(), exc_obj)
+
 # Left and Right Motors:
 BrickPi.MotorEnable[L] = 1 # LEFT
 BrickPi.MotorEnable[R] = 1 # RIGHT
@@ -66,9 +80,11 @@ CAMERA = picamera.PiCamera()
 V_WIDTH, V_HEIGHT = 320, 240
 FRAMERATE = 5
 
-# Service configuration
-LOCAL_ADDR = socket.getfqdn()
-MOBOT_PORT = 15112
+# Const:
+VERT_EXC_UP = 0.48
+VERT_EXC_DOWN = 0.07
+HORI_EXC_L = 0.0
+HORI_EXC_R = 0.0
 
 # Global Constants:
 FILTER_ORIG   = 0 # Original Video
@@ -112,19 +128,25 @@ def profile(fn):
         start_time = time.time()
         ret = fn(*args, **kwargs)
         elapsed_time = time.time() - start_time
-        #info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
+        info("Time elapsed for function: %s: %.4f"%(fn.__name__, elapsed_time))
         return ret
     return with_profiling
 
-HEIGHT, WIDTH = V_HEIGHT, V_WIDTH
+def cropImage(img, exc_up, exc_down, exc_l, exc_r, tgt_w, tgt_h):
+    # Refer to design notebook for parameter documentation
+    assert(exc_up >= 0 and exc_down >= 0 and exc_l >= 0 and exc_r >= 0)
+    assert(exc_up + exc_down < 1 and exc_l + exc_r < 1)
+    row, col, ch = img.shape
+    x = int(col * exc_l)
+    y = int(row * exc_up)
+    w = int(col - col * exc_r)
+    h = int(row - row * exc_down)
+    return cv2.resize(img[y:h, x:w], dsize = (tgt_w, tgt_h))
 
 def grayToRGB(img):
     # Converts grayscale image into RGB
     # This conversion uses numpy array operation and takes less time
     return cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-
-# I only put useful auxiliary functions here, to find more about my
-# work on cv checkout ../config/config.py
 
 @profile
 def findBlurred(img, blur_factor):
@@ -388,18 +410,61 @@ class ImageProcessor(threading.Thread):
         # Do the image processing
         # Generate grayscale image
         grayimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        # Grayscale image is faster to fetch for client
-        # Update server frame
-        self.master.cntframe = grayimg
 
         # Blur image
         blurred = findBlurred(grayimg, BLUR_FACTOR)
+
+        # Find dynamic threshold for image
+        DYN_THRESHOLD = processing.new_get_gray(blurred, row = V_HEIGHT - 1)
+
+        # Display necessary information on HUD
+        cv2.putText(grayimg, "THRESHOLD: %d"%DYN_THRESHOLD, (5, 5),
+            cv2.FONT_HERSHEY_SIMPLEX, 12, (0, 255, 0))
+
+        # Grayscale image is faster to fetch for client
+        # Update server frame
+        master.cntframe = grayimg
+
         # Find tracking points
         master.trackingpts = samplePoints(blurred, _isPotentialTrackingPoint,
             n=TRACK_PT_NUM, radius=RADIUS, a=ALPHA, b=BETA, c=GAMMA,
-            threshold=THRESHOLD, samplesize=SAMPLESIZE, certainty=CERTAINTY)
+            threshold=DYN_THRESHOLD, samplesize=SAMPLESIZE, certainty=CERTAINTY)
 
         # info(str(master.trackingpts))
+
+    @profile
+    def alphacv(self, img):
+        # This is an alternative computer vision algorithm proposed by Matthew
+        master = self.master
+        BLUR_FACTOR = master.values['BLUR']
+        TRACK_PT_NUM = master.values['PTS']
+        RADIUS = master.values['RADI']
+        ALPHA = master.values['A']
+        BETA = master.values['B']
+        GAMMA = 1 - ALPHA - BETA
+        THRESHOLD = master.values['THRS']
+        SAMPLESIZE = master.values['SIZE']
+        CERTAINTY = master.values['CERT']
+        # Do the image processing
+        # Generate grayscale image
+        grayimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # Blur image
+        blurred = findBlurred(grayimg, BLUR_FACTOR)
+
+        # The dynamic threshold calculation is embedded in algorithm
+        # TODO: Experiment to be done to determine the realibility of statistic
+
+        # Display necessary information on HUD
+
+        # Find tracking segments
+        interval = 15
+        pt_count = 10 #min(TRACK_PT_NUM, interval)
+        grayimg, pts = processing.get_good_pts(blurred, grayimg,
+            interval = interval, pt_count = pt_count)
+
+        master.cntframe = grayimg
+        master.trackingpts = pts
 
     def run(self):
         # Runs as separate thread
@@ -417,16 +482,27 @@ class ImageProcessor(threading.Thread):
                     if self.master.filterstate == 3:
                         # IRNV: invert color
                         img = cv2.bitwise_not(img)
+                        self.betacv(img)
 
-                    # img = data = np.fromstring(self.stream.getvalue(),
-                    #     dtype=np.uint8)
-                    self.betacv(img)
+                    elif self.master.filterstate == 4:
+                        img = cropImage(img, VERT_EXC_UP, VERT_EXC_DOWN,
+                            HORI_EXC_L, HORI_EXC_R,
+                            tgt_w = V_WIDTH, tgt_h = V_HEIGHT)
+                        self.alphacv(img)
 
-                    # Control the robot
-                    # self.vL = ???
-                    # self.vR = ???
-                except:
+                    elif self.master.filterstate == 6:
+                        # HYBRID
+                        # IRNV + ALPHACV
+                        img = cv2.bitwise_not(img)
+                        self.alphacv(img)
+
+                    else:
+                        self.betacv(img)
+
+                except Exception as inst:
+                    echoException()
                     warn("image processor exception, frame skipped")
+
                 finally:
                     # Reset the stream and event
                     self.stream.seek(0)
@@ -436,13 +512,15 @@ class ImageProcessor(threading.Thread):
                     with self.master.lock:
                         self.master.pool.append(self)
 
-class Mobot():
+class MobotService(rpyc.Service):
     def __init__(self, *args, **kwargs):
-        init("standalone instance created")
+        rpyc.Service.__init__(self, *args, **kwargs)
+        init("mobot service instance created")
 
         # Status
         self.uptime = time.time()
         self.missionuptime = time.time()
+        self._connected = False
 
         self.filterstate = 0
 
@@ -459,7 +537,8 @@ class Mobot():
             'BATT': 100, 'ADDR': LOCAL_ADDR
         }
 
-        self.cntframe = None
+        self.emptyfootage = np.zeros((V_HEIGHT, V_WIDTH), dtype = np.uint8)
+        self.cntframe = self.emptyfootage
         self.trackingpts = []
 
         self.vL = 0 # left speed
@@ -480,12 +559,18 @@ class Mobot():
             args=(self.hardwarestop,))
         self.hardwarethd.daemon = True
 
+        # Remote video streaming therad
+        self.videostop = threading.Event()
+        self.videothd = None
+
         # Enable camera
+        self.stream = io.BytesIO()
         init("enabling camera")
         CAMERA.resolution = (V_WIDTH, V_HEIGHT)
         CAMERA.framerate = FRAMERATE
         CAMERA.start_preview()
         time.sleep(0.2)
+        # CAMERA.capture_continuous(self.stream, format='jpeg')
 
         # Image Processor Control Variables
         self.done = False # stops Image Processor
@@ -493,17 +578,12 @@ class Mobot():
         self.pool = [] # Pool of Image Processors
 
         # PID Control Variable
-        self.basespeed = 100
+        self.basespeed = 200
         self.errorsum = 0
         self.preverr = 0
-        self.p = 1
+        self.p = 1.2
         self.i = 0
-        self.d = 0
-
-        self.loopstop.clear()
-        self.hardwarestop.clear()
-        self.loopthd.start()
-        self.hardwarethd.start()
+        self.d = 1
 
     @staticmethod
     def yieldstreams(scv):
@@ -521,12 +601,74 @@ class Mobot():
                 # Pool is starved, wait for it to refill
                 time.sleep(0.1)
 
-    def setFilterState(self, state):
+    def on_connect(self):
+        info("received connection")
+        self._connected = True
+        self.loopstop.clear()
+        self.hardwarestop.clear()
+        self.done = False
+        self.loopthd.start()
+        self.hardwarethd.start()
+
+    def on_disconnect(self):
+        warn("connection lost")
+        self._connected = False
+        self.done = True
+        self.loopstop.set()
+        self.hardwarestop.set()
+        self.exposed_stopVideoStream()
+
+        # Shut down the processors orderly
+        while self.pool:
+            with self.lock:
+                processor = self.pool.pop()
+            processor.terminated = True
+            # Suspicious join method
+            # processor.join()
+
+    def exposed_recognized(self):
+        return True
+
+    def exposed_setFilterState(self, state):
         assert(type(state) is int)
         self.filterstate = state
 
-    def getTrackingPts(self):
+    def exposed_getMobotStatus(self):
+        # Returning the weak reference to states dict
+        # Changing the values in dict will directly affect local var
+        return self.status
+
+    def exposed_getMobotValues(self):
+        # Returning the weak reference to values dict
+        # Changing the values in dict will directly affect local var
+        return self.values
+
+    def exposed_getVideoSpecs(self):
+        # Returns the frame size
+        return (V_WIDTH, V_HEIGHT)
+
+    def exposed_getCurrentFrame(self):
+        # Returns a string of ndarray in grayscale
+        return self.cntframe.tostring()
+
+    def exposed_getTrackingPts(self):
         return self.trackingpts
+
+    # Not suggested but usable: drags down performance dramatically
+    def exposed_startVideoStream(self, port):
+        # Establishs a TCP connection with interface for video streaming
+        if self.videothd != None:
+            warn("video streaming already running")
+            return
+        self.videothd = threading.Thread(target=startVideoStream_H264,
+            args=(port, self.videostop))
+        self.videothd.daemon = True
+        info("starting video stream")
+        self.videothd.start()
+
+    def exposed_stopVideoStream(self):
+        info("stopping video stream")
+        self.videostop.set()
 
     def _updateStatus(self):
         # Polls device information and updates status dict
@@ -548,6 +690,12 @@ class Mobot():
     def _calcMobotSpeed(self):
         # Calculates speed of robot relatively
         return int((self.vL + self.vR) / 2.0)
+
+    def exposed_setMotorSpeed(self, l, r):
+        maxspeed = self.values['MAXS']
+        l = l * (maxspeed / 255.0)
+        r = r * (maxspeed / 255.0)
+        self._setMotorSpeed(l, r)
 
     def update(self, stop_event):
         # Mobot hardware update loop
@@ -594,6 +742,7 @@ class Mobot():
             use_video_port=True)
 
     def calculateMobotMovement(self):
+        # return (0,0)
         # Error is the offset of the bottom trackpoint from middle of frame
         if len(self.trackingpts) == 0: return (0, 0)
         err = self.trackingpts[0][0] - V_WIDTH / 2
@@ -608,10 +757,10 @@ class Mobot():
         self.preverr = err
         # Drive is the difference in speed between two wheels
         # Drive is positive when turning left
-        drive = pterm + iterm + dterm
+        drive = int(pterm + iterm + dterm)
 
-        lwheel = - (self.basespeed + drive / 2)
-        rwheel = - (self.basespeed - drive / 2)
+        lwheel = -(self.basespeed + drive)
+        rwheel = -(self.basespeed - drive)
 
         # Cap the wheel speeds to [-255, 255]
         lwheel = max(min(lwheel, 255), -255)
@@ -620,5 +769,6 @@ class Mobot():
         return (lwheel, rwheel)
 
 if __name__ == "__main__":
-    init("starting standalone version")
-    mobot = Mobot()
+    init("initiating mobot server")
+    server = ThreadedServer(MobotService, port = MOBOT_PORT)
+    server.start()

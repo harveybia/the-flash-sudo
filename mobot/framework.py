@@ -18,6 +18,7 @@ import sys
 import time
 import math
 import rpyc
+import getopt
 import struct
 import socket
 import picamera
@@ -31,6 +32,15 @@ from rpyc.utils.server import ThreadedServer
 from utils import init, info, warn, term2
 
 STABLE_MODE = True
+# The following two constants are overridden manually via command line
+# Usage: framework.py (-s (-m <mode>))
+STANDALONE = False
+# Manual CV Mode override: This only applies to standalone runtime version
+# alpha: Matthew's algorithm, based on histogram
+# beta: Harvey's algorithm, based on probabilistic model
+CV_MANUAL_MODE = 'alpha'
+# MANUAL_IRNV will result in tracking black line instead of white line
+CV_MANUAL_IRNV = False
 
 # Reference: BrickPi_Python/Sensor_Examples/*.py
 # Reference: http://picamera.readthedocs.org/en/release-1.10/recipes1.html
@@ -80,11 +90,19 @@ CAMERA = picamera.PiCamera()
 V_WIDTH, V_HEIGHT = 320, 240
 FRAMERATE = 5
 
-# Const:
+# Const Image Crop Parameters:
 VERT_EXC_UP = 0.48
 VERT_EXC_DOWN = 0.07
 HORI_EXC_L = 0.0
 HORI_EXC_R = 0.0
+
+# PID Control Pre-cast Variables
+CTRL_P = 1.5
+CTRL_I = 0
+CTRL_D = 1
+
+# Motor speed configuration
+MOTOR_BASESPEED = 200
 
 # Service configuration
 LOCAL_ADDR = socket.getfqdn()
@@ -123,6 +141,43 @@ STAT_ONLINE = 22
 STAT_DISCONNECTED = 23
 STAT_MISSION = 24
 STAT_ABORT = 25
+
+# Parse the input parameters:
+try:
+    # --help, --standalone, --mode: 'alpha' or 'beta'
+    # h: help; s: standalone; m: either 'alpha' or 'beta'
+    opts, args = getopt.getopt(sys.argv[1:], 'hsm:i', [])
+except getopt.GetoptError:
+    print 'usage: framework.py (-s (-m <mode>(-i)))'
+    sys.exit(2)
+
+for opt, arg in opts:
+    if opt == '-h':
+        print 'usage: framework.py (-s (-m <mode>(-i)))'
+    elif opt in ('-s', '--standalone'):
+        STANDALONE = True
+    elif opt in ('-m', '--mode'):
+        if arg == 'alpha':
+            init('system running on alpha histogram algorithm.')
+            CV_MANUAL_MODE = 'alpha'
+        elif arg == 'beta':
+            init('system running on beta probabilistic algorithm.')
+            CV_MANUAL_MODE = 'beta'
+        else:
+            warn('not a valid mode, falling back to alpha.')
+            CV_MANUAL_MODE = 'alpha'
+    elif opt in ('-i', '--inverted'):
+        info('inverted cam mode enabled')
+        CV_MANUAL_IRNV = True
+    else:
+        warn('unhandled option, cowardly exiting.')
+        sys.exit(2)
+
+# Clean namespace
+try:
+    del opts, args
+except:
+    pass
 
 # ---------- COMPUTER VISION CORE ALGORITHM ----------
 
@@ -516,15 +571,14 @@ class ImageProcessor(threading.Thread):
                     with self.master.lock:
                         self.master.pool.append(self)
 
-class MobotService(rpyc.Service):
-    def __init__(self, *args, **kwargs):
-        rpyc.Service.__init__(self, *args, **kwargs)
-        init("mobot service instance created")
-
-        # Status
+class MobotFramework(object):
+    def __init__(self):
+        # Note: This class utilizes pre-coded parameters
+        # This class does not have the ability to interact with client
+        # Core framework
+        init('mobot basic framework initiating...')
         self.uptime = time.time()
         self.missionuptime = time.time()
-        self._connected = False
 
         self.filterstate = 0
 
@@ -564,8 +618,8 @@ class MobotService(rpyc.Service):
         self.hardwarethd.daemon = True
 
         # Remote video streaming therad
-        self.videostop = threading.Event()
-        self.videothd = None
+        # self.videostop = threading.Event()
+        # self.videothd = None
 
         # Enable camera
         self.stream = io.BytesIO()
@@ -582,12 +636,12 @@ class MobotService(rpyc.Service):
         self.pool = [] # Pool of Image Processors
 
         # PID Control Variable
-        self.basespeed = 200
+        self.basespeed = MOTOR_BASESPEED
         self.errorsum = 0
         self.preverr = 0
-        self.p = 1.2
-        self.i = 0
-        self.d = 1
+        self.p = CTRL_P
+        self.i = CTRL_I
+        self.d = CTRL_D
 
     @staticmethod
     def yieldstreams(scv):
@@ -605,23 +659,84 @@ class MobotService(rpyc.Service):
                 # Pool is starved, wait for it to refill
                 time.sleep(0.1)
 
-    def on_connect(self):
-        info("received connection")
-        self._connected = True
+    def _updateStatus(self):
+        # Polls device information and updates status dict
+        self.status['STAT'] = STAT_ONLINE
+        self.status['ACTT'] = int(time.time() - self.uptime)
+        self.status['MIST'] = 0
+        self.status['DELY'] = 100
+        self.status['CVST'] = STAT_ONLINE
+        self.status['BATT'] = 99
+        self.status['SPED'] = self._calcMobotSpeed()
+
+    def _setMotorSpeed(self, l, r):
+        if abs(l) > 255 or abs(r) > 255:
+            raise ParameterInvalidException("Invalid motor speeds")
+        self.vL = int(l); self.vR = int(r)
+        # BrickPi.MotorSpeed[L] = l
+        # BrickPi.MotorSpeed[R] = r
+
+    def _calcMobotSpeed(self):
+        # Calculates speed of robot relatively
+        return int((self.vL + self.vR) / 2.0)
+
+    def mainloop(self, stop_event):
+        BUFFERSIZE = 4
+        self.pool = [ImageProcessor(self) for i in xrange(BUFFERSIZE)]
+        CAMERA.capture_sequence(MobotFramework.yieldstreams(self),
+            use_video_port=True)
+
+    def update(self, stop_event):
+        # Mobot hardware update loop
+        # self.alphacv() # Removed: Image Processing doesnt happen here anymore
+        while not stop_event.is_set():
+            self.touchcount = abs(self.touchcount - 1)
+            BrickPi.MotorSpeed[L] = self.vL
+            BrickPi.MotorSpeed[L1] = self.vL
+            BrickPi.MotorSpeed[R] = self.vR
+            BrickPi.MotorSpeed[R1] = self.vR
+            result = BrickPiUpdateValues()
+            if not result:
+                # Successfully updated values
+                # Read touch sensor values
+                if BrickPi.Sensor[S2]:
+                    # Prevent signal disturbances
+                    threshold = int(28 - self.values['TCHS'] * 20)
+                    self.touchcount += 2
+                    if self.touchcount > threshold:
+                        # Increment gates count
+                        self.status['GATC'] += 1
+                        # Reset signal strength
+                        self.touchcount = 0
+                # Update encoder values
+                self.encL = BrickPi.Encoder[L]
+                self.encR = BrickPi.Encoder[R]
+
+            speeds = self.calculateMobotMovement()
+            self._setMotorSpeed(speeds[0], speeds[1])
+            self._updateStatus()
+
+            # Update Terminal Feedback
+            # Should be disabled for safety considerations -> STABLE_MODE
+            if term2 != None and not STABLE_MODE:
+                c = term2.scr.getch()
+                if c == 410:
+                    info("@terminal: resize event")
+                    term2.resizeAll()
+                term2.refreshAll()
+
+    def startMission(self):
         self.loopstop.clear()
         self.hardwarestop.clear()
         self.done = False
         self.loopthd.start()
         self.hardwarethd.start()
 
-    def on_disconnect(self):
-        warn("connection lost")
-        self._connected = False
+    def stopMission(self):
         self.done = True
         self.loopstop.set()
         self.hardwarestop.set()
         self.exposed_stopVideoStream()
-
         # Shut down the processors orderly
         while self.pool:
             with self.lock:
@@ -630,12 +745,67 @@ class MobotService(rpyc.Service):
             # Suspicious join method
             # processor.join()
 
+    def setFilterState(self, state):
+        # Manually sets the filter state, ususally called by standalone wrapper
+        if type(state) is not int: return
+        self.filterstate = state
+
+    def calculateMobotMovement(self):
+        # return (0,0)
+        # Error is the offset of the bottom trackpoint from middle of frame
+        if len(self.trackingpts) == 0: return (0, 0)
+        err = self.trackingpts[0][0] - V_WIDTH / 2
+
+        # Proportion term
+        pterm = err * self.p
+        # Calculate the integral term
+        self.errorsum += err
+        iterm = self.errorsum * self.i
+        # Calculate the derivative term
+        dterm = (err - self.preverr) * self.d
+        self.preverr = err
+        # Drive is the difference in speed between two wheels
+        # Drive is positive when turning left
+        drive = int(pterm + iterm + dterm)
+
+        lwheel = -(self.basespeed + drive)
+        rwheel = -(self.basespeed - drive)
+
+        # Cap the wheel speeds to [-255, 255]
+        lwheel = max(min(lwheel, 255), -255)
+        rwheel = max(min(rwheel, 255), -255)
+
+        return (lwheel, rwheel)
+
+class MobotService(rpyc.Service, MobotFramework):
+    def __init__(self, *args, **kwargs):
+        # Inherit from basic framework
+        MobotFramework.__init__(self)
+        rpyc.Service.__init__(self, *args, **kwargs)
+        init("mobot service instance created")
+
+        # Status
+        self._connected = False
+
+        # Remote video streaming therad
+        self.videostop = threading.Event()
+        self.videothd = None
+
+    def on_connect(self):
+        info("received connection")
+        self._connected = True
+        self.startMission()
+
+    def on_disconnect(self):
+        warn("connection lost")
+        self._connected = False
+        self.stopMission()
+
     def exposed_recognized(self):
         return True
 
     def exposed_setFilterState(self, state):
-        assert(type(state) is int)
-        self.filterstate = state
+        self.setFilterState(state)
 
     def exposed_getMobotStatus(self):
         # Returning the weak reference to states dict
@@ -674,105 +844,41 @@ class MobotService(rpyc.Service):
         info("stopping video stream")
         self.videostop.set()
 
-    def _updateStatus(self):
-        # Polls device information and updates status dict
-        self.status['STAT'] = STAT_ONLINE
-        self.status['ACTT'] = int(time.time() - self.uptime)
-        self.status['MIST'] = 0
-        self.status['DELY'] = 100
-        self.status['CVST'] = STAT_ONLINE
-        self.status['BATT'] = 99
-        self.status['SPED'] = self._calcMobotSpeed()
-
-    def _setMotorSpeed(self, l, r):
-        if abs(l) > 255 or abs(r) > 255:
-            raise ParameterInvalidException("Invalid motor speeds")
-        self.vL = int(l); self.vR = int(r)
-        # BrickPi.MotorSpeed[L] = l
-        # BrickPi.MotorSpeed[R] = r
-
-    def _calcMobotSpeed(self):
-        # Calculates speed of robot relatively
-        return int((self.vL + self.vR) / 2.0)
-
     def exposed_setMotorSpeed(self, l, r):
         maxspeed = self.values['MAXS']
         l = l * (maxspeed / 255.0)
         r = r * (maxspeed / 255.0)
         self._setMotorSpeed(l, r)
 
-    def update(self, stop_event):
-        # Mobot hardware update loop
-        # self.alphacv() # Removed: Image Processing doesnt happen here anymore
-        while not stop_event.is_set():
-            self.touchcount = abs(self.touchcount - 1)
-            BrickPi.MotorSpeed[L] = self.vL
-            BrickPi.MotorSpeed[L1] = self.vL
-            BrickPi.MotorSpeed[R] = self.vR
-            BrickPi.MotorSpeed[R1] = self.vR
-            result = BrickPiUpdateValues()
-            if not result:
-                # Successfully updated values
-                # Read touch sensor values
-                if BrickPi.Sensor[S2]:
-                    # Prevent signal disturbances
-                    threshold = int(28 - self.values['TCHS'] * 20)
-                    self.touchcount += 2
-                    if self.touchcount > threshold:
-                        # Increment gates count
-                        self.status['GATC'] += 1
-                        # Reset signal strength
-                        self.touchcount = 0
-                # Update encoder values
-                self.encL = BrickPi.Encoder[L]
-                self.encR = BrickPi.Encoder[R]
-
-            speeds = self.calculateMobotMovement()
-            self._setMotorSpeed(speeds[0], speeds[1])
-            self._updateStatus()
-
-            # Update Terminal Feedback
-            if term2 != None and not STABLE_MODE:
-                c = term2.scr.getch()
-                if c == 410:
-                    info("@terminal: resize event")
-                    term2.resizeAll()
-                term2.refreshAll()
-
-    def mainloop(self, stop_event):
-        BUFFERSIZE = 4
-        self.pool = [ImageProcessor(self) for i in xrange(BUFFERSIZE)]
-        CAMERA.capture_sequence(MobotService.yieldstreams(self),
-            use_video_port=True)
-
-    def calculateMobotMovement(self):
-        # return (0,0)
-        # Error is the offset of the bottom trackpoint from middle of frame
-        if len(self.trackingpts) == 0: return (0, 0)
-        err = self.trackingpts[0][0] - V_WIDTH / 2
-
-        # Proportion term
-        pterm = err * self.p
-        # Calculate the integral term
-        self.errorsum += err
-        iterm = self.errorsum * self.i
-        # Calculate the derivative term
-        dterm = (err - self.preverr) * self.d
-        self.preverr = err
-        # Drive is the difference in speed between two wheels
-        # Drive is positive when turning left
-        drive = int(pterm + iterm + dterm)
-
-        lwheel = -(self.basespeed + drive)
-        rwheel = -(self.basespeed - drive)
-
-        # Cap the wheel speeds to [-255, 255]
-        lwheel = max(min(lwheel, 255), -255)
-        rwheel = max(min(rwheel, 255), -255)
-
-        return (lwheel, rwheel)
-
 if __name__ == "__main__":
-    init("initiating mobot server")
-    server = ThreadedServer(MobotService, port = MOBOT_PORT)
-    server.start()
+    if not STANDALONE:
+        init('interactive mode enabled by default')
+        init('initiating mobot server')
+        server = ThreadedServer(MobotService, port = MOBOT_PORT)
+        server.start()
+
+    else:
+        init('standalone mode')
+        init('creating offline worker instance')
+        f_state = 4 # Default value
+        if CV_MANUAL_MODE == 'alpha':
+            if not CV_MANUAL_IRNV:
+                f_state = 4
+            else:
+                f_state = 6
+        elif CV_MANUAL_MODE == 'beta':
+            if not CV_MANUAL_IRNV:
+                f_state = 0
+            else:
+                f_state = 3
+        else:
+            warn('internal error: wrong CV_MANUAL_MODE entry')
+            info('falling back to alpha, non-inverted mode')
+            f_state = 4
+
+        # Initialize offline instance
+        mobot = MobotFramework()
+        mobot.setFilterState(f_state)
+        mobot.startMission()
+        # An offline version will not terminate
+        # TODO: add state machine to tackle loops, and terminate the movement
