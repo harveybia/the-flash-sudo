@@ -717,7 +717,8 @@ class MobotFramework(object):
         self.d = CTRL_D
 
         # Loop control state machine
-        self.loopstate = BifurcationState(V_WIDTH, V_HEIGHT, LOOP_CHOICES)
+        self.loopstate = processing.BifurcationState(V_WIDTH, V_HEIGHT,
+            LOOP_CHOICES)
 
     @staticmethod
     def yieldstreams(scv):
