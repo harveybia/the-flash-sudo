@@ -46,11 +46,11 @@ class SegmentNode(object):
         return hash(self.get_hashables())
 
     def __eq__(self, other):
-        return (isinstance(other, SegmentNode) and 
+        return (isinstance(other, SegmentNode) and
             self.segment == other.segment and self.height == other.height)
 
     def __repr__(self):
-        return ("(%d, %d), size %d at height %d" % 
+        return ("(%d, %d), size %d at height %d" %
             (self.segment[0], self.segment[1], self.graph_size, self.height))
 
     def is_root(self):
@@ -58,7 +58,7 @@ class SegmentNode(object):
 
 class BifurcationState(object):
 
-    STATES = ["SINGLE_LINE", "APPROACH_CONVERGE", 
+    STATES = ["SINGLE_LINE", "APPROACH_CONVERGE",
         "APPROACH_DIVERGE", "ON_DIVERGE", "PASS_DIVERGE"]
 
     EDGE = 0.1
@@ -108,7 +108,7 @@ class BifurcationState(object):
             # We only care about converge in this state
             converge = get_converge(roots)
             if converge != None:
-                if (self.converge == None or 
+                if (self.converge == None or
                     self.converge.height >= converge.height):
                     self.converge_count += 1
                     self.converge = converge
@@ -119,7 +119,7 @@ class BifurcationState(object):
                     self.time = 0
                     self.diverge_count = 0
             if diverge != None:
-                if (self.diverge == None or 
+                if (self.diverge == None or
                     self.diverge.height >= diverge.height):
                     self.diverge_count += 1
                     self.diverge = diverge
@@ -130,15 +130,15 @@ class BifurcationState(object):
                     self.state == "ON_DIVERGE"
                     self.diverge_count = 0
                     self.time = 0
-                
+
         elif self.state == "APPROACH_CONVERGE":
             # This state is a safety that prevents us from missing the diverge
             if diverge != None:
-                if (self.diverge == None or 
+                if (self.diverge == None or
                     self.diverge.height >= diverge.height):
                     self.diverge_count += 1
                     self.diverge = diverge
-                if (self.time > BifurcationState.THERESHOLD_TIME or 
+                if (self.time > BifurcationState.THERESHOLD_TIME or
                     diverge.height <= BifurcationState.THERESHOLD_HEIGHT or
                     edge_segments == 1):
                     self.state == "ON_DIVERGE"
@@ -148,14 +148,14 @@ class BifurcationState(object):
         elif self.state == "ON_DIVERGE":
             # We need to be ready to make the choice here
             if diverge != None:
-                if (self.diverge == None or 
+                if (self.diverge == None or
                     self.diverge.height >= diverge.height):
                     self.diverge_count += 1
                     self.diverge = diverge
             else:
                 self.diverge_count += 1
-            if (self.time > BifurcationState.THERESHOLD_TIME and 
-                (diverge == None or 
+            if (self.time > BifurcationState.THERESHOLD_TIME and
+                (diverge == None or
                 diverge.height > BifurcationState.THERESHOLD_HEIGHT) and
                 self.diverge_count >= BifurcationState.THERESHOLD_COUNT):
                 self.diverge = None
@@ -170,8 +170,8 @@ class BifurcationState(object):
                 self.bifurcation_count += 1
 
 
-        return ("TIME: %d STATE: %s DIVERGE: %s COUNT: %d EDGE_SEGMENTS: %d" 
-            %(self.time, self.state, 
+        return ("TIME: %d STATE: %s DIVERGE: %s COUNT: %d EDGE_SEGMENTS: %d"
+            %(self.time, self.state,
                 str(diverge_height), self.diverge_count,
                 self.edge_segments))
 
@@ -308,7 +308,7 @@ def gen_segment_nodes(all_segments):
         result.append(row_nodes)
     return result
 
-def link_segments(all_segments, display = None, 
+def link_segments(all_segments, display = None,
     interval = 0, img_height = 0, skip = False):
     # Generates a node for each segment and links them together.
     # Returns a list of "root" nodes (those that don't have a previous node)
@@ -337,7 +337,7 @@ def link_segments(all_segments, display = None,
                             row = img_height - (height - 1) * interval
                             cv2.line(display, (prev_node.segment[0], row),
                                 (prev_node.segment[1], row), (255, 255, 255), 3)
-            if segment_node.is_root(): 
+            if segment_node.is_root():
                 segment_node.roots.add(segment_node)
                 roots.append(segment_node)
     # Segments in the first line are always roots
@@ -363,7 +363,7 @@ def find_converge_from_node(curr):
     # Returns a segment node (possibly None)
     # @params
     # roots: (list<SegmentNode>) A list of root nodes
-    if len(curr.prev) == 2: 
+    if len(curr.prev) == 2:
         prev_segments = list(curr.prev)
         if not has_repetition(prev_segments[0].prev, prev_segments[1].prev):
             return curr
@@ -400,7 +400,7 @@ def find_split_from_node(curr):
     # Returns a segment node (possibly None)
     # @params
     # roots: (list<SegmentNode>) A list of root nodes
-    if len(curr.next) == 2: 
+    if len(curr.next) == 2:
         next_segments = list(curr.next)
         if not has_repetition(next_segments[0].next, next_segments[1].next):
             return curr
@@ -458,7 +458,7 @@ def new_get_gray(img, row, sample_rows = 10, thereshold = 20):
 
 def get_good_pts(grayimg, display, sample_rows = 5,
         interval = 15, pt_count = 10,
-        max_length = 0.5, max_segments = 4, skip = False, 
+        max_length = 0.5, max_segments = 4, skip = False,
         choose_thin = False, debug = False):
     # Get the white segments from picture and filter bad points
     # Currently returns a list of only the most reasonable tracking point
@@ -481,7 +481,7 @@ def get_good_pts(grayimg, display, sample_rows = 5,
         # With the assumption that the mobot always turn left on turn:
         # TODO: The turning decision is to be made
         row = rows - i * interval
-        result = get_white_segments_from_row(grayimg, row, 
+        result = get_white_segments_from_row(grayimg, row,
             sample_rows = sample_rows)
         good_results = []
         if result != [] and len(result) <= max_segments:
@@ -499,7 +499,7 @@ def get_good_pts(grayimg, display, sample_rows = 5,
     # Get rid of small trees
     # Return the x coord of the most reasonable point to track
     # Which is the root with the minimum height
-    display, roots = link_segments(segments, display = display, 
+    display, roots = link_segments(segments, display = display,
         interval = interval, img_height = rows, skip = skip)
     largest_tree = None
     largest_size = 0
@@ -519,7 +519,7 @@ def get_good_pts(grayimg, display, sample_rows = 5,
                 sec_largest_tree = root
         else:
             # We also take in account the "wideness" of the segments
-            weighted_size = (root.graph_size ** 2 / 
+            weighted_size = (root.graph_size ** 2 /
                 (float)(root.segment_length_sum))
             if weighted_size >= largest_size:
                 sec_largest_size = largest_size
@@ -533,14 +533,14 @@ def get_good_pts(grayimg, display, sample_rows = 5,
 
 def get_tracking_data(grayimg, display, state, sample_rows = 5,
         interval = 15, pt_count = 10,
-        max_length = 0.5, max_segments = 4, skip = False, 
-        choose_thin = False, debug = False, 
-        split_detection = False, 
+        max_length = 0.5, max_segments = 4, skip = False,
+        choose_thin = False, debug = False,
+        split_detection = False,
         root_height_threshold = 2, root_size_threshold = 4):
     rows, cols = grayimg.shape
     display, roots = get_good_pts(grayimg, display, sample_rows = sample_rows,
         interval = interval, pt_count = pt_count,
-        max_length = max_length, max_segments = max_segments, skip = skip, 
+        max_length = max_length, max_segments = max_segments, skip = skip,
         choose_thin = choose_thin, debug = debug)
     if roots == None:
         return display, [(cols / 2, rows)]
@@ -561,7 +561,7 @@ def get_tracking_data(grayimg, display, state, sample_rows = 5,
             elif state.state == "PASS_DIVERGE":
                 if choice.upper() == "L":
                     selected_root = roots[0]
-                    if (roots[1] != None and 
+                    if (roots[1] != None and
                         roots[1].segment[0] < selected_root.segment[0] and
                         roots[1].height <= root_height_threshold and
                         roots[1].size >= root_size_threshold):
@@ -571,7 +571,7 @@ def get_tracking_data(grayimg, display, state, sample_rows = 5,
                 else:
                     assert choice.upper() == "R"
                     selected_root = roots[0]
-                    if (roots[1] != None and 
+                    if (roots[1] != None and
                         roots[1].segment[1] > selected_root.segment[1] and
                         roots[1].height <= root_height_threshold and
                         roots[1].size >= root_size_threshold):
@@ -667,7 +667,7 @@ def test_segment_tree():
     if converge != None: converge = converge.height * interval
     split = get_split(roots)
     print "Split = ", split
-    for node in split.roots: 
+    for node in split.roots:
         print node
     if split != None: split = split.height * interval
     print "Converge: ", converge
@@ -721,7 +721,7 @@ def test_get_good_pts():
     img = cv2.resize(img,(width, height), interpolation = cv2.INTER_CUBIC)
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     img = cv2.GaussianBlur(img,(11,11),0)
-    img, pts = get_tracking_data(img, img, None, pt_count = 20, skip = True, 
+    img, pts = get_tracking_data(img, img, None, pt_count = 20, skip = True,
         debug = True, choose_thin = True)
     print pts[0]
     plt.imshow(img, cmap = 'gray', interpolation = 'bicubic')

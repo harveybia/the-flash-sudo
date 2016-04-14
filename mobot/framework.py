@@ -55,6 +55,9 @@ R = PORT_C
 R1 = PORT_D
 S2 = PORT_4
 
+# Pre-coded choices for loops (right or left)
+LOOP_CHOICES = ['L', 'R', 'L', 'R', 'L'] # Temp TODO: Fix this
+
 # Exceptions
 class ParameterInvalidException(Exception):
     def __init__(self, description):
@@ -111,7 +114,7 @@ ALPHA_CV_ROW_SKIP = False
 ALPHA_CV_CHOOSE_THIN = False
 
 # Motor speed configuration
-MOTOR_BASESPEED = 180
+MOTOR_BASESPEED = 150
 
 # Service configuration
 LOCAL_ADDR = socket.getfqdn()
@@ -582,9 +585,15 @@ class ImageProcessor(threading.Thread):
         # Find tracking segments
         interval = ALPHACV_INTERVAL
         pt_count = ALPHACV_PT_COUNT #min(TRACK_PT_NUM, interval)
-        grayimg, pts = processing.get_good_pts(blurred, grayimg,
+        # grayimg, pts = processing.get_good_pts(blurred, grayimg,
+            # interval = interval, pt_count = pt_count,
+            # skip=ALPHA_CV_ROW_SKIP, choose_thin=ALPHA_CV_CHOOSE_THIN)
+
+        grayimg, pts = processing.get_tracking_data(blurred, grayimg,
+            master.loopstate,
             interval = interval, pt_count = pt_count,
-            skip=ALPHA_CV_ROW_SKIP, choose_thin=ALPHA_CV_CHOOSE_THIN)
+            skip=ALPHA_CV_ROW_SKIP, choose_thin=ALPHA_CV_CHOOSE_THIN,
+            split_detection = True)
 
         master.cntframe = grayimg
         master.trackingpts = pts
@@ -706,6 +715,9 @@ class MobotFramework(object):
         self.p = CTRL_P
         self.i = CTRL_I
         self.d = CTRL_D
+
+        # Loop control state machine
+        self.loopstate = BifurcationState(V_WIDTH, V_HEIGHT, LOOP_CHOICES)
 
     @staticmethod
     def yieldstreams(scv):
@@ -847,8 +859,8 @@ class MobotFramework(object):
         rwheel = -(self.basespeed - drive)
 
         # Cap the wheel speeds to [-255, 255]
-        lwheel = max(min(lwheel, 255), -255)
-        rwheel = max(min(rwheel, 255), -255)
+        lwheel = min(max(lwheel, -255), 100)
+        rwheel = min(max(rwheel, -255), 100)
 
         return (lwheel, rwheel)
 
