@@ -2,7 +2,7 @@ import time
 from i2clibraries import i2c_hmc5883l
 
 INCLINE_THRESHOLD = 420
-hmc5883l = i2c_hmc5883l.hmc5883l()
+hmc5883l = i2c_hmc5883l.hmc5883l(declination = (-9, -18))
 
 def getMobotAttitude():
     return hmc5883l.axes()
