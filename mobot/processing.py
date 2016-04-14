@@ -213,7 +213,7 @@ def get_white_segments_from_row(pic, row,
     thereshold *= bucket_size * sample_rows
     # print "thereshold:", thereshold
     # print "old thereshold:", thereshold_old
-    assert len(histogram) == buckets
+    # assert len(histogram) == buckets
     # Find the starts and ends for the white segments
     black_flag = True   # We start from black region
     result = []
@@ -247,7 +247,7 @@ def get_white_segments_from_row(pic, row,
         # We need to add the last segment
         result.append((start, width))
     else: result.append((start, end))
-    assert result != []
+    # assert result != []
     # get rid of segments that are too short
     i = 0
     while i < len(result):
@@ -267,15 +267,15 @@ def get_histogram(A, buckets):
     # @params
     # A: (list<list<int>>) the rows of numbers to sample
     # buckets: (int) the # of buckets
-    assert A != []
+    # assert A != []
 
     n = len(A[0])
-    assert n > 0
+    # assert n > 0
     bucket_size = (n - 1) / buckets + 1
     result = [0] * buckets
     for row in A:
         # The input should be rectangular
-        assert len(row) == n
+        # assert len(row) == n
         for i in range(n):
             bucket = i / bucket_size
             result[bucket] += row[i]
@@ -287,7 +287,7 @@ def get_threshold(l, hi_rank = 2, lo_rank = 2):
     # l: (list<int>) the list of integers
     # rank: (int) discard the top *rank* highest/lowest entries
     rank = max(lo_rank, hi_rank)
-    assert rank > 0
+    # assert rank > 0
     if len(l) < rank:
         warn("List too short for rank!")
         rank = len(l)
@@ -419,7 +419,7 @@ def overlap(s1, s2):
     # Returns true if two segments s1 and s2 overlap
     # @params
     # s1, s2: ((int, int)) two segments
-    assert s1[0] < s1[1] and s2[0] < s2[1]
+    # assert s1[0] < s1[1] and s2[0] < s2[1]
     return (s1[0] <= s2[0] and s1[1] >= s2[0]
         or s2[0] <= s1[0] and s2[1] >= s1[0])
 
@@ -559,7 +559,7 @@ def get_tracking_data(grayimg, display, state, sample_rows = 5,
                     point[1] = rows - interval * roots[0].height
                 else:
                     print "choosing Right"
-                    assert choice.upper() == "R"
+                    # assert choice.upper() == "R"
                     point[0] = roots[0].segment[1]
                     point[1] = rows - interval * roots[0].height
             elif state.state == "PASS_DIVERGE":
@@ -575,7 +575,7 @@ def get_tracking_data(grayimg, display, state, sample_rows = 5,
                     point[1] = rows - interval * selected_root.height
                 else:
                     print "choosing Right"
-                    assert choice.upper() == "R"
+                    # assert choice.upper() == "R"
                     selected_root = roots[0]
                     if (roots[1] != None and
                         roots[1].segment[1] > selected_root.segment[1] and
