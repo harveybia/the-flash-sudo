@@ -41,6 +41,9 @@ STANDALONE = False
 CV_MANUAL_MODE = 'alpha'
 # MANUAL_IRNV will result in tracking black line instead of white line
 CV_MANUAL_IRNV = False
+# Manual
+# Whether CV skips one row to find curve (deals with unpainted area)
+CV_ROW_SKIP = False
 
 # Reference: BrickPi_Python/Sensor_Examples/*.py
 # Reference: http://picamera.readthedocs.org/en/release-1.10/recipes1.html
@@ -101,6 +104,12 @@ CTRL_P = 1.9
 CTRL_I = 0.0005
 CTRL_D = 0.5
 
+# Alphacv algorithm configuration
+# WARNING: Algorithm is non-linear, increasing number would result in
+#          non-determinant polynominal time!
+ALPHACV_INTERVAL = 15
+ALPHACV_PT_COUNT = 10
+
 # Motor speed configuration
 MOTOR_BASESPEED = 180
 
@@ -146,14 +155,24 @@ STAT_ABORT = 25
 try:
     # --help, --standalone, --mode: 'alpha' or 'beta'
     # h: help; s: standalone; m: either 'alpha' or 'beta'
-    opts, args = getopt.getopt(sys.argv[1:], 'hsm:i', [])
+    opts, args = getopt.getopt(sys.argv[1:], 'hsm:ikc', [])
 except getopt.GetoptError:
-    print 'usage: framework.py (-s (-m <mode>(-i)))'
+    print "usage: run 'framework.py -h' to see documentation"
     sys.exit(2)
 
 for opt, arg in opts:
     if opt == '-h':
-        print 'usage: framework.py (-s (-m <mode>(-i)))'
+        print 'usage: framework.py (-s (-m <mode> -i -k))'
+        print flash
+        print '-h           Print help (this message) and exit'
+        print '-s           Run standalone mode independent of client'
+        print '-i           Invert the color seen (we are tracking white line)'
+        print '-k           Row skip: allow skipping rows for grouping'
+        print '-m <mode>    Select CV Mode being used'
+        print '             -> alpha: new histogram model'
+        print '             -> beta: obsolete probabilistic tracking model'
+        print '-c           Save processed image (under alphacv)'
+        sys.exit(2)
     elif opt in ('-s', '--standalone'):
         STANDALONE = True
     elif opt in ('-m', '--mode'):
@@ -167,8 +186,16 @@ for opt, arg in opts:
             warn('not a valid mode, falling back to alpha.')
             CV_MANUAL_MODE = 'alpha'
     elif opt in ('-i', '--inverted'):
-        info('inverted cam mode enabled')
+        info('inverted cam mode enabled.')
         CV_MANUAL_IRNV = True
+    elif opt in ('-k',):
+        info('row skipping enabled.')
+        CV_ROW_SKIP = True
+    elif opt in ('-c',):
+        info('capturing image with alphacv, please wait until program exits.')
+        captureAndSaveImage()
+        info('succeeded, exiting.')
+        sys.exit(0)
     else:
         warn('unhandled option, cowardly exiting.')
         sys.exit(2)
@@ -178,6 +205,22 @@ try:
     del opts, args
 except:
     pass
+
+def captureAndSaveImage():
+    stream = io.BytesIO()
+    CAMERA.resolution = (V_WIDTH, V_HEIGHT)
+    CAMERA.framerate = FRAMERATE
+    CAMERA.start_preview()
+    time.sleep(0.5)
+    CAMERA.capture(stream, format='jpeg')
+    data = np.fromstring(stream.getvalue(), dtype=np.uint8)
+    raw_img = cv2.imdecode(data, 0) # Returns a grayscale image
+    blurred = findBlurred(raw_img, BLUR_FACTOR)
+    display, pointlst = processing.get_good_pts(blurred, raw_img,
+        interval=ALPHACV_INTERVAL, pt_count=ALPHACV_PT_COUNT)
+    # assert(len(pointlst) == 0): this is postcondition of alphacv
+    filename = 'captured/' + time.ctime().replace(' ', '_') + '.jpg'
+    cv2.imwrite(filename, display)
 
 # ---------- COMPUTER VISION CORE ALGORITHM ----------
 
@@ -517,8 +560,8 @@ class ImageProcessor(threading.Thread):
         # Display necessary information on HUD
 
         # Find tracking segments
-        interval = 15
-        pt_count = 10 #min(TRACK_PT_NUM, interval)
+        interval = ALPHACV_INTERVAL
+        pt_count = ALPHACV_PT_COUNT #min(TRACK_PT_NUM, interval)
         grayimg, pts = processing.get_good_pts(blurred, grayimg,
             interval = interval, pt_count = pt_count)
 
