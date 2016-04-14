@@ -62,9 +62,9 @@ class BifurcationState(object):
         "APPROACH_DIVERGE", "ON_DIVERGE", "PASS_DIVERGE"]
 
     EDGE = 0.1
-    THERESHOLD_TIME = 4
+    THERESHOLD_TIME = 1
     THERESHOLD_HEIGHT = 5
-    THERESHOLD_COUNT = 3
+    THERESHOLD_COUNT = 2
 
     def __init__(self, width, height, choices):
         self.state = "SINGLE_LINE"
@@ -82,8 +82,8 @@ class BifurcationState(object):
         self.choice = choices[0]
 
     def update(self, root_node):
+        self.time += 1
         if self.state != "SINGLE_LINE":
-            self.time += 1
             self.converge = None
             self.converge_count = 0
         roots = root_node.roots
@@ -115,7 +115,7 @@ class BifurcationState(object):
                 if (self.time > BifurcationState.THERESHOLD_TIME and
                     self.converge_count >= BifurcationState.THERESHOLD_COUNT and
                     converge.height <= BifurcationState.THERESHOLD_HEIGHT):
-                    self.state == "APPROACH_CONVERGE"
+                    self.state = "APPROACH_CONVERGE"
                     self.time = 0
                     self.diverge_count = 0
             if diverge != None:
@@ -127,7 +127,7 @@ class BifurcationState(object):
                     self.diverge_count >= BifurcationState.THERESHOLD_COUNT and
                     diverge.height <= BifurcationState.THERESHOLD_HEIGHT and
                     edge_segments == 1):
-                    self.state == "ON_DIVERGE"
+                    self.state = "ON_DIVERGE"
                     self.diverge_count = 0
                     self.time = 0
 
@@ -141,7 +141,7 @@ class BifurcationState(object):
                 if (self.time > BifurcationState.THERESHOLD_TIME or
                     diverge.height <= BifurcationState.THERESHOLD_HEIGHT or
                     edge_segments == 1):
-                    self.state == "ON_DIVERGE"
+                    self.state = "ON_DIVERGE"
                     self.diverge_count = 0
                     self.time = 0
 
@@ -160,7 +160,7 @@ class BifurcationState(object):
                 self.diverge_count >= BifurcationState.THERESHOLD_COUNT):
                 self.diverge = None
                 self.diverge_count = 0
-                self.state == "PASS_DIVERGE"
+                self.state = "PASS_DIVERGE"
                 self.time = 0
 
         elif self.state == "PASS_DIVERGE":
@@ -168,6 +168,8 @@ class BifurcationState(object):
                 self.state = "SINGLE_LINE"
                 self.time = 0
                 self.bifurcation_count += 1
+                self.bifurcation_count %= len(self.choices)
+                self.choice = self.choices[self.bifurcation_count]
 
 
         return ("TIME: %d STATE: %s DIVERGE: %s COUNT: %d EDGE_SEGMENTS: %d"
@@ -390,7 +392,7 @@ def get_split(roots):
             result = curr
     return result
 
-def has_repetition(s1):
+def has_repetition(s1, s2):
     for item in s1:
         if item in s2: return True
     return False
@@ -421,7 +423,7 @@ def overlap(s1, s2):
     return (s1[0] <= s2[0] and s1[1] >= s2[0]
         or s2[0] <= s1[0] and s2[1] >= s1[0])
 
-def get_image_histogram(img, step = 2):
+def get_image_histogram(img, step = 5):
     # Get the histogram of the image
     # @params
     # img: (List<list<int>>) the image
@@ -552,29 +554,33 @@ def get_tracking_data(grayimg, display, state, sample_rows = 5,
             choice = state.choice
             if state.state == "ON_DIVERGE":
                 if choice.upper() == "L":
+                    print "choosing Left"
                     point[0] = roots[0].segment[0]
                     point[1] = rows - interval * roots[0].height
                 else:
+                    print "choosing Right"
                     assert choice.upper() == "R"
                     point[0] = roots[0].segment[1]
                     point[1] = rows - interval * roots[0].height
             elif state.state == "PASS_DIVERGE":
                 if choice.upper() == "L":
+                    print "choosing Left"
                     selected_root = roots[0]
                     if (roots[1] != None and
                         roots[1].segment[0] < selected_root.segment[0] and
                         roots[1].height <= root_height_threshold and
-                        roots[1].size >= root_size_threshold):
+                        roots[1].graph_size >= root_size_threshold):
                         selected_root = roots[1]
                     point[0] = selected_root.segment[0]
                     point[1] = rows - interval * selected_root.height
                 else:
+                    print "choosing Right"
                     assert choice.upper() == "R"
                     selected_root = roots[0]
                     if (roots[1] != None and
                         roots[1].segment[1] > selected_root.segment[1] and
                         roots[1].height <= root_height_threshold and
-                        roots[1].size >= root_size_threshold):
+                        roots[1].graph_size >= root_size_threshold):
                         selected_root = roots[1]
                     point[0] = selected_root.segment[1]
                     point[1] = rows - interval * selected_root.height

@@ -91,7 +91,7 @@ BrickPiSetupSensors()
 # Camera configuration
 CAMERA = picamera.PiCamera()
 V_WIDTH, V_HEIGHT = 320, 240
-FRAMERATE = 5
+FRAMERATE = 7
 
 # Const Image Crop Parameters:
 VERT_EXC_UP = 0.0 # 0.48
@@ -100,7 +100,7 @@ HORI_EXC_L = 0.0
 HORI_EXC_R = 0.0
 
 # PID Control Pre-cast Variables
-CTRL_P = 1.9
+CTRL_P = 2.3
 CTRL_I = 0.0005
 CTRL_D = 0.5
 
@@ -114,7 +114,7 @@ ALPHA_CV_ROW_SKIP = False
 ALPHA_CV_CHOOSE_THIN = False
 
 # Motor speed configuration
-MOTOR_BASESPEED = 150
+MOTOR_BASESPEED = 220
 
 # Service configuration
 LOCAL_ADDR = socket.getfqdn()
