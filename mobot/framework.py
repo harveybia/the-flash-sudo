@@ -91,18 +91,18 @@ V_WIDTH, V_HEIGHT = 320, 240
 FRAMERATE = 5
 
 # Const Image Crop Parameters:
-VERT_EXC_UP = 0.48
+VERT_EXC_UP = 0.0 # 0.48
 VERT_EXC_DOWN = 0.07
 HORI_EXC_L = 0.0
 HORI_EXC_R = 0.0
 
 # PID Control Pre-cast Variables
-CTRL_P = 1.5
-CTRL_I = 0
-CTRL_D = 1
+CTRL_P = 1.9
+CTRL_I = 0.0005
+CTRL_D = 0.5
 
 # Motor speed configuration
-MOTOR_BASESPEED = 200
+MOTOR_BASESPEED = 180
 
 # Service configuration
 LOCAL_ADDR = socket.getfqdn()
