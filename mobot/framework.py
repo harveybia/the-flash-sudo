@@ -206,7 +206,7 @@ for opt, arg in opts:
         captureAndSaveImage()
         info('succeeded, exiting.')
         sys.exit(0)
-        
+
     else:
         warn('unhandled option, cowardly exiting.')
         sys.exit(2)
