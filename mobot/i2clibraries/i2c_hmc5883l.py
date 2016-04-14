@@ -1,156 +1,99 @@
+#!/usr/bin/env python
+# vim: set fileencoding=UTF-8 :
+
+# HMC5888L Magnetometer (Digital Compass) wrapper class
+# Based on https://bitbucket.org/thinkbowl/i2clibraries/src/14683feb0f96,
+# but uses smbus rather than quick2wire and sets some different init
+# params.
+
+import smbus
 import math
-from i2clibraries import i2c
-from time import *
+import time
+import sys
 
-class i2c_hmc5883l:
-	
-	ConfigurationRegisterA = 0x00
-	ConfigurationRegisterB = 0x01
-	ModeRegister = 0x02
-	AxisXDataRegisterMSB = 0x03
-	AxisXDataRegisterLSB = 0x04
-	AxisZDataRegisterMSB = 0x05
-	AxisZDataRegisterLSB = 0x06
-	AxisYDataRegisterMSB = 0x07
-	AxisYDataRegisterLSB = 0x08
-	StatusRegister = 0x09
-	IdentificationRegisterA = 0x10
-	IdentificationRegisterB = 0x11
-	IdentificationRegisterC = 0x12
-	
+class hmc5883l:
 
-	MeasurementContinuous = 0x00
-	MeasurementSingleShot = 0x01
-	MeasurementIdle = 0x03
-	
-	def __init__(self, port, addr=0x1e, gauss=1.3):
-		self.bus = i2c.i2c(port, addr)
-		
-		self.setScale(gauss)
-		
-	def __str__(self):
-		ret_str = ""
-		(x, y, z) = self.getAxes()
-		ret_str += "Axis X: "+str(x)+"\n"       
-		ret_str += "Axis Y: "+str(y)+"\n" 
-		ret_str += "Axis Z: "+str(z)+"\n" 
-		
-		ret_str += "Declination: "+self.getDeclinationString()+"\n" 
-		
-		ret_str += "Heading: "+self.getHeadingString()+"\n" 
-		
-		return ret_str
-		
-		
-		
-	def setContinuousMode(self):
-		self.setOption(self.ModeRegister, self.MeasurementContinuous)
-		
-	def setScale(self, gauss):
-		if gauss == 0.88:
-			self.scale_reg = 0x00
-			self.scale = 0.73
-		elif gauss == 1.3:
-			self.scale_reg = 0x01
-			self.scale = 0.92
-		elif gauss == 1.9:
-			self.scale_reg = 0x02
-			self.scale = 1.22
-		elif gauss == 2.5:
-			self.scale_reg = 0x03
-			self.scale = 1.52
-		elif gauss == 4.0:
-			self.scale_reg = 0x04
-			self.scale = 2.27
-		elif gauss == 4.7:
-			self.scale_reg = 0x05
-			self.scale = 2.56
-		elif gauss == 5.6:
-			self.scale_reg = 0x06
-			self.scale = 3.03
-		elif gauss == 8.1:
-			self.scale_reg = 0x07
-			self.scale = 4.35
-		
-		self.scale_reg = self.scale_reg << 5
-		self.setOption(self.ConfigurationRegisterB, self.scale_reg)
-		
-	def setDeclination(self, degree, min = 0):
-		self.declinationDeg = degree
-		self.declinationMin = min
-		self.declination = (degree+min/60) * (math.pi/180)
-		
-	def setOption(self, register, *function_set):
-		options = 0x00
-		for function in function_set:
-			options = options | function
-		self.bus.write_byte(register, options)
-		
-	# Adds to existing options of register	
-	def addOption(self, register, *function_set):
-		options = self.bus.read_byte(register)
-		for function in function_set:
-			options = options | function
-		self.bus.write_byte(register, options)
-		
-	# Removes options of register	
-	def removeOption(self, register, *function_set):
-		options = self.bus.read_byte(register)
-		for function in function_set:
-			options = options & (function ^ 0b11111111)
-		self.bus.write_byte(register, options)
-		
-	def getDeclination(self):
-		return (self.declinationDeg, self.declinationMin)
-	
-	def getDeclinationString(self):
-		return str(self.declinationDeg)+"\u00b0 "+str(self.declinationMin)+"'"
-	
-	# Returns heading in degrees and minutes
-	def getHeading(self):
-		(scaled_x, scaled_y, scaled_z) = self.getAxes()
-		
-		headingRad = math.atan2(scaled_y, scaled_x)
-		headingRad += self.declination
+    __scales = {
+        0.88: [0, 0.73],
+        1.30: [1, 0.92],
+        1.90: [2, 1.22],
+        2.50: [3, 1.52],
+        4.00: [4, 2.27],
+        4.70: [5, 2.56],
+        5.60: [6, 3.03],
+        8.10: [7, 4.35],
+    }
 
-		# Correct for reversed heading
-		if(headingRad < 0):
-			headingRad += 2*math.pi
-			
-		# Check for wrap and compensate
-		if(headingRad > 2*math.pi):
-			headingRad -= 2*math.pi
-			
-		# Convert to degrees from radians
-		headingDeg = headingRad * 180/math.pi
-		degrees = math.floor(headingDeg)
-		minutes = round(((headingDeg - degrees) * 60))
-		return (degrees, minutes)
-	
-	def getHeadingString(self):
-		(degrees, minutes) = self.getHeading()
-		return str(degrees)+"\u00b0 "+str(minutes)+"'"
-		
-	def getAxes(self):
-		(magno_x, magno_z, magno_y) = self.bus.read_3s16int(self.AxisXDataRegisterMSB)
+    def __init__(self, port=1, address=0x1E, gauss=1.3, declination=(0,0)):
+        self.bus = smbus.SMBus(port)
+        self.address = address
 
-		if (magno_x == -4096):
-			magno_x = None
-		else:
-			magno_x = round(magno_x * self.scale, 4)
-			
-		if (magno_y == -4096):
-			magno_y = None
-		else:
-			magno_y = round(magno_y * self.scale, 4)
-			
-		if (magno_z == -4096):
-			magno_z = None
-		else:
-			magno_z = round(magno_z * self.scale, 4)
-			
-		return (magno_x, magno_y, magno_z)
-		
-	
-		
-	
+        (degrees, minutes) = declination
+        self.__declDegrees = degrees
+        self.__declMinutes = minutes
+        self.__declination = (degrees + minutes / 60) * math.pi / 180
+
+        (reg, self.__scale) = self.__scales[gauss]
+        self.bus.write_byte_data(self.address, 0x00, 0x70) # 8 Average, 15 Hz, normal measurement
+        self.bus.write_byte_data(self.address, 0x01, reg << 5) # Scale
+        self.bus.write_byte_data(self.address, 0x02, 0x00) # Continuous measurement
+
+    def declination(self):
+        return (self.__declDegrees, self.__declMinutes)
+
+    def twos_complement(self, val, len):
+        # Convert twos compliment to integer
+        if (val & (1 << len - 1)):
+            val = val - (1<<len)
+        return val
+
+    def __convert(self, data, offset):
+        val = self.twos_complement(data[offset] << 8 | data[offset+1], 16)
+        if val == -4096: return None
+        return round(val * self.__scale, 4)
+
+    def axes(self):
+        data = self.bus.read_i2c_block_data(self.address, 0x00)
+        #print map(hex, data)
+        x = self.__convert(data, 3)
+        y = self.__convert(data, 7)
+        z = self.__convert(data, 5)
+        return (x,y,z)
+
+    def heading(self):
+        (x, y, z) = self.axes()
+        headingRad = math.atan2(y, x)
+        headingRad += self.__declination
+
+        # Correct for reversed heading
+        if headingRad < 0:
+            headingRad += 2 * math.pi
+
+        # Check for wrap and compensate
+        elif headingRad > 2 * math.pi:
+            headingRad -= 2 * math.pi
+
+        # Convert to degrees from radians
+        headingDeg = headingRad * 180 / math.pi
+        return headingDeg
+
+    def degrees(self, headingDeg):
+        degrees = math.floor(headingDeg)
+        minutes = round((headingDeg - degrees) * 60)
+        return (degrees, minutes)
+
+    def __str__(self):
+        (x, y, z) = self.axes()
+        return "Axis X: " + str(x) + "\n" \
+               "Axis Y: " + str(y) + "\n" \
+               "Axis Z: " + str(z) + "\n" \
+               "Declination: " + self.degrees(self.declination()) + "\n" \
+               "Heading: " + self.degrees(self.heading()) + "\n"
+
+if __name__ == "__main__":
+    # http://magnetic-declination.com/Great%20Britain%20(UK)/Harrogate#
+    compass = hmc5883l(gauss = 4.7, declination = (-2,5))
+    while True:
+        sys.stdout.write("\rHeading: " + str(compass.degrees(compass.heading())) + "     ")
+        sys.stdout.flush()
+        time.sleep(0.5)
