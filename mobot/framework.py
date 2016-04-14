@@ -101,6 +101,15 @@ CTRL_P = 1.9
 CTRL_I = 0.0005
 CTRL_D = 0.5
 
+# Alphacv algorithm configuration
+# WARNING: Algorithm is non-linear, increasing number would result in
+#          non-determinant polynominal time!
+ALPHACV_INTERVAL = 15
+ALPHACV_PT_COUNT = 10
+# Whether CV skips one row to find curve (deals with unpainted area)
+ALPHA_CV_ROW_SKIP = False
+ALPHA_CV_CHOOSE_THIN = False
+
 # Motor speed configuration
 MOTOR_BASESPEED = 180
 
@@ -109,6 +118,8 @@ LOCAL_ADDR = socket.getfqdn()
 MOBOT_PORT = 15112
 
 # Global Constants:
+CV_BLUR_FACTOR = 4
+
 FILTER_ORIG   = 0 # Original Video
 FILTER_PROC   = 1 # Processed Image (Canny Edges)
 FILTER_BW     = 2 # Black & White View
@@ -141,43 +152,6 @@ STAT_ONLINE = 22
 STAT_DISCONNECTED = 23
 STAT_MISSION = 24
 STAT_ABORT = 25
-
-# Parse the input parameters:
-try:
-    # --help, --standalone, --mode: 'alpha' or 'beta'
-    # h: help; s: standalone; m: either 'alpha' or 'beta'
-    opts, args = getopt.getopt(sys.argv[1:], 'hsm:i', [])
-except getopt.GetoptError:
-    print 'usage: framework.py (-s (-m <mode>(-i)))'
-    sys.exit(2)
-
-for opt, arg in opts:
-    if opt == '-h':
-        print 'usage: framework.py (-s (-m <mode>(-i)))'
-    elif opt in ('-s', '--standalone'):
-        STANDALONE = True
-    elif opt in ('-m', '--mode'):
-        if arg == 'alpha':
-            init('system running on alpha histogram algorithm.')
-            CV_MANUAL_MODE = 'alpha'
-        elif arg == 'beta':
-            init('system running on beta probabilistic algorithm.')
-            CV_MANUAL_MODE = 'beta'
-        else:
-            warn('not a valid mode, falling back to alpha.')
-            CV_MANUAL_MODE = 'alpha'
-    elif opt in ('-i', '--inverted'):
-        info('inverted cam mode enabled')
-        CV_MANUAL_IRNV = True
-    else:
-        warn('unhandled option, cowardly exiting.')
-        sys.exit(2)
-
-# Clean namespace
-try:
-    del opts, args
-except:
-    pass
 
 # ---------- COMPUTER VISION CORE ALGORITHM ----------
 
@@ -411,6 +385,95 @@ def sampleContourArray(img, interval=12, injective=False):
     return S
 
 # ----------------------- END ------------------------
+# ------------------ SYS ARGV PARSER -----------------
+
+def captureAndSaveImage():
+    # Boot option: -c, captures image with recognition
+    stream = io.BytesIO()
+    CAMERA.resolution = (V_WIDTH, V_HEIGHT)
+    CAMERA.framerate = FRAMERATE
+    CAMERA.start_preview()
+    time.sleep(0.5)
+    CAMERA.capture(stream, format='jpeg')
+    data = np.fromstring(stream.getvalue(), dtype=np.uint8)
+    raw_img = cv2.imdecode(data, 0) # Returns a grayscale image
+    blurred = findBlurred(raw_img, CV_BLUR_FACTOR)
+    display, pointlst = processing.get_good_pts(blurred, raw_img,
+        interval=ALPHACV_INTERVAL, pt_count=ALPHACV_PT_COUNT,
+        skip=ALPHA_CV_ROW_SKIP, choose_thin=ALPHA_CV_CHOOSE_THIN)
+    # assert(len(pointlst) == 0): this is postcondition of alphacv
+    filename = 'captured/' + time.ctime().replace(' ', '_').replace(':', '_') \
+        + '.jpg'
+    cv2.imwrite(filename, display)
+
+
+# Parse the input parameters:
+try:
+    # --help, --standalone, --mode: 'alpha' or 'beta'
+    # h: help; s: standalone; m: either 'alpha' or 'beta'
+    opts, args = getopt.getopt(sys.argv[1:], 'hsm:iktc', [])
+except getopt.GetoptError:
+    print "usage: run 'framework.py -h' to see documentation"
+    sys.exit(2)
+
+for opt, arg in opts:
+    if opt == '-h':
+        print 'usage: framework.py (-s (-m <mode> -i -k))'
+        print flash
+        print '-h           Print help (this message) and exit'
+        print '-s           Run standalone mode independent of client'
+        print '-i           Invert the color seen (we are tracking white line)'
+        print '-m <mode>    Select CV Mode being used'
+        print '             -> alpha: new histogram model'
+        print '             -> beta: obsolete probabilistic tracking model'
+        print '------------------ALPHACV EXCLUSIVE OPTIONS------------------'
+        print '-c           Save processed image (under alphacv)'
+        print '-k           Row skip: allow skipping rows for grouping'
+        print '-t           Choose thin: whether we shall favor thinner group'
+        sys.exit(2)
+    elif opt in ('-s', '--standalone'):
+        STANDALONE = True
+
+    elif opt in ('-m', '--mode'):
+        if arg == 'alpha':
+            init('system running on alpha histogram algorithm.')
+            CV_MANUAL_MODE = 'alpha'
+        elif arg == 'beta':
+            init('system running on beta probabilistic algorithm.')
+            CV_MANUAL_MODE = 'beta'
+        else:
+            warn('not a valid mode, falling back to alpha.')
+            CV_MANUAL_MODE = 'alpha'
+
+    elif opt in ('-i', '--inverted'):
+        info('inverted cam mode enabled.')
+        CV_MANUAL_IRNV = True
+
+    elif opt in ('-k',):
+        info('row skipping enabled.')
+        ALPHA_CV_ROW_SKIP = True
+
+    elif opt in ('-t',):
+        info('choose_thin enabled.')
+        ALPHA_CV_CHOOSE_THIN = True
+
+    elif opt in ('-c',):
+        info('capturing image with alphacv, please wait until program exits.')
+        captureAndSaveImage()
+        info('succeeded, exiting.')
+        sys.exit(0)
+
+    else:
+        warn('unhandled option, cowardly exiting.')
+        sys.exit(2)
+
+# Clean namespace
+try:
+    del opts, args
+except:
+    pass
+
+# ----------------------- END ------------------------
 
 def debugConnection(sock, addr, port):
     # Prints the details of a connection
@@ -517,10 +580,11 @@ class ImageProcessor(threading.Thread):
         # Display necessary information on HUD
 
         # Find tracking segments
-        interval = 15
-        pt_count = 10 #min(TRACK_PT_NUM, interval)
+        interval = ALPHACV_INTERVAL
+        pt_count = ALPHACV_PT_COUNT #min(TRACK_PT_NUM, interval)
         grayimg, pts = processing.get_good_pts(blurred, grayimg,
-            interval = interval, pt_count = pt_count)
+            interval = interval, pt_count = pt_count,
+            skip=ALPHA_CV_ROW_SKIP, choose_thin=ALPHA_CV_CHOOSE_THIN)
 
         master.cntframe = grayimg
         master.trackingpts = pts
@@ -583,7 +647,7 @@ class MobotFramework(object):
         self.filterstate = 0
 
         self.values = {
-            'BRIG': 0, 'CNST': 50, 'BLUR': 4,
+            'BRIG': 0, 'CNST': 50, 'BLUR': CV_BLUR_FACTOR,
             'THRS': 150, 'SIZE': 3, 'CERT': 0.7, 'PTS': 4, 'RADI': 30,
                 'A': 0.6, 'B': 0.3, 'C': 0.1,
             'TCHS': 0.5, 'GATG': 14, 'MAXS': 100
