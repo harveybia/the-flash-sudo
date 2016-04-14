@@ -67,7 +67,7 @@ class BifurcationState(object):
     THERESHOLD_COUNT = 3
 
     def __init__(self, width, height, choices):
-        self.state = STATES[0]
+        self.state = "SINGLE_LINE"
         self.img_width = width
         self.img_height = height
         self.time = 0
