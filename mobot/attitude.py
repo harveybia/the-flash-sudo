@@ -11,5 +11,5 @@ def getMobotAttitude():
 
 if __name__ == "__main__":
     while 1:
-        print getMobotAttitude()
+        print(getMobotAttitude())
         time.wait(0.5)
