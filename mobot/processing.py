@@ -16,6 +16,7 @@ class SegmentNode(object):
         self.graph_size = 1
         self.segment_length_sum = abs(segment[1] - segment[0])
         self.max_height = height
+        self.roots = set()
 
     def addNext(self, other):
         self.next.add(other)
@@ -23,18 +24,20 @@ class SegmentNode(object):
 
         height = other.height
         length_sum = self.segment_length_sum + other.segment_length_sum
-        other.set_graph_size(height, length_sum)
+        roots = self.roots.union(other.roots)
+        other.refresh_graph(height, length_sum, roots)
 
-    def set_graph_size(self, height, length_sum):
+    def refresh_graph(self, height, length_sum, roots):
         if height > self.max_height:
             self.graph_size += height - self.max_height
             self.max_height = height
+        self.roots = roots
         self.segment_length_sum = length_sum
         # for node in self.next:
         #     node.set_graph_size(size)
         # This only propagates backwards
         for node in self.prev:
-            node.set_graph_size(height, length_sum)
+            node.refresh_graph(height, length_sum, roots)
 
     def get_hashables(self):
         return (self.segment[0], self.segment[1], self.height)
@@ -46,8 +49,131 @@ class SegmentNode(object):
         return (isinstance(other, SegmentNode) and 
             self.segment == other.segment and self.height == other.height)
 
+    def __repr__(self):
+        return ("(%d, %d), size %d at height %d" % 
+            (self.segment[0], self.segment[1], self.graph_size, self.height))
+
     def is_root(self):
         return len(self.prev) == 0
+
+class BifurcationState(object):
+
+    STATES = ["SINGLE_LINE", "APPROACH_CONVERGE", 
+        "APPROACH_DIVERGE", "ON_DIVERGE", "PASS_DIVERGE"]
+
+    EDGE = 0.1
+    THERESHOLD_TIME = 4
+    THERESHOLD_HEIGHT = 5
+    THERESHOLD_COUNT = 3
+
+    def __init__(self, width, height, choices):
+        self.state = STATES[0]
+        self.img_width = width
+        self.img_height = height
+        self.time = 0
+        self.edge_segments = 1
+        self.converge = None
+        self.diverge = None
+        self.converge_count = 0
+        self.diverge_count = 0
+
+        self.bifurcation_count = 0
+        self.choices = choices
+        self.choice = choices[0]
+
+    def update(self, root_node):
+        if self.state != "SINGLE_LINE":
+            self.time += 1
+            self.converge = None
+            self.converge_count = 0
+        roots = root_node.roots
+        # Find the number of roots on the edge of the frame
+        edge_segments = 0
+        edge = BifurcationState.EDGE * self.img_width
+        for root in roots:
+            if (root.height <= 1 or
+                root.segment[0] < edge or
+                root.segment[1] > self.img_width - edge):
+                edge_segments += 1
+        self.edge_segments = edge_segments
+
+        # Find first diverge
+        diverge = get_split(roots)
+        diverge_height = None
+        if diverge != None:
+            diverge_height = diverge.height
+
+        if self.state == "SINGLE_LINE":
+            # Find first converge
+            # We only care about converge in this state
+            converge = get_converge(roots)
+            if converge != None:
+                if (self.converge == None or 
+                    self.converge.height >= converge.height):
+                    self.converge_count += 1
+                    self.converge = converge
+                if (self.time > BifurcationState.THERESHOLD_TIME and
+                    self.converge_count >= BifurcationState.THERESHOLD_COUNT and
+                    converge.height <= BifurcationState.THERESHOLD_HEIGHT):
+                    self.state == "APPROACH_CONVERGE"
+                    self.time = 0
+                    self.diverge_count = 0
+            if diverge != None:
+                if (self.diverge == None or 
+                    self.diverge.height >= diverge.height):
+                    self.diverge_count += 1
+                    self.diverge = diverge
+                if (self.time > BifurcationState.THERESHOLD_TIME and
+                    self.diverge_count >= BifurcationState.THERESHOLD_COUNT and
+                    diverge.height <= BifurcationState.THERESHOLD_HEIGHT and
+                    edge_segments == 1):
+                    self.state == "ON_DIVERGE"
+                    self.diverge_count = 0
+                    self.time = 0
+                
+        elif self.state == "APPROACH_CONVERGE":
+            # This state is a safety that prevents us from missing the diverge
+            if diverge != None:
+                if (self.diverge == None or 
+                    self.diverge.height >= diverge.height):
+                    self.diverge_count += 1
+                    self.diverge = diverge
+                if (self.time > BifurcationState.THERESHOLD_TIME or 
+                    diverge.height <= BifurcationState.THERESHOLD_HEIGHT or
+                    edge_segments == 1):
+                    self.state == "ON_DIVERGE"
+                    self.diverge_count = 0
+                    self.time = 0
+
+        elif self.state == "ON_DIVERGE":
+            # We need to be ready to make the choice here
+            if diverge != None:
+                if (self.diverge == None or 
+                    self.diverge.height >= diverge.height):
+                    self.diverge_count += 1
+                    self.diverge = diverge
+            else:
+                self.diverge_count += 1
+            if (self.time > BifurcationState.THERESHOLD_TIME and 
+                (diverge == None or 
+                diverge.height > BifurcationState.THERESHOLD_HEIGHT) and
+                self.diverge_count >= BifurcationState.THERESHOLD_COUNT):
+                self.diverge = None
+                self.diverge_count = 0
+                self.state == "PASS_DIVERGE"
+                self.time = 0
+
+        elif self.state == "PASS_DIVERGE":
+            if(self.time > BifurcationState.THERESHOLD_TIME):
+                self.state = "SINGLE_LINE"
+                self.time = 0
+                self.bifurcation_count += 1
+
+
+        return ("TIME: %d STATE: %s DIVERGE: %s COUNT: %d EDGE_SEGMENTS: %d" 
+            %(self.time, self.state, 
+                str(diverge_height), self.diverge_count,
+                self.edge_segments))
 
 def get_gray(pic, sample_rows = 5, col_step = 5, rank = 5):
     # Get the prefect gray value from a black/white picture
@@ -190,6 +316,8 @@ def link_segments(all_segments, display = None,
     # all_segments: (list<list<(int, int)>>) A list of rows of segements
     all_nodes = gen_segment_nodes(all_segments)
     roots = []
+    for node in all_nodes[0]:
+        node.roots.add(node)
     for height in xrange(1, len(all_nodes)):
         row_nodes = all_nodes[height]
         for segment_node in row_nodes:
@@ -209,7 +337,9 @@ def link_segments(all_segments, display = None,
                             row = img_height - (height - 1) * interval
                             cv2.line(display, (prev_node.segment[0], row),
                                 (prev_node.segment[1], row), (255, 255, 255), 3)
-            if segment_node.is_root(): roots.append(segment_node)
+            if segment_node.is_root(): 
+                segment_node.roots.add(segment_node)
+                roots.append(segment_node)
     # Segments in the first line are always roots
     roots += all_nodes[0]
     return display, roots
@@ -233,7 +363,10 @@ def find_converge_from_node(curr):
     # Returns a segment node (possibly None)
     # @params
     # roots: (list<SegmentNode>) A list of root nodes
-    if len(curr.prev) > 1: return curr
+    if len(curr.prev) == 2: 
+        prev_segments = list(curr.prev)
+        if not has_repetition(prev_segments[0].prev, prev_segments[1].prev):
+            return curr
     best = None
     for node in curr.next:
         result = find_converge_from_node(node)
@@ -257,12 +390,20 @@ def get_split(roots):
             result = curr
     return result
 
+def has_repetition(s1):
+    for item in s1:
+        if item in s2: return True
+    return False
+
 def find_split_from_node(curr):
     # Get the first segment where one line splits into two lines recursively
     # Returns a segment node (possibly None)
     # @params
     # roots: (list<SegmentNode>) A list of root nodes
-    if len(curr.next) > 1: return curr
+    if len(curr.next) == 2: 
+        next_segments = list(curr.next)
+        if not has_repetition(next_segments[0].next, next_segments[1].next):
+            return curr
     best = None
     for node in curr.next:
         result = find_split_from_node(node)
@@ -353,43 +494,100 @@ def get_good_pts(grayimg, display, sample_rows = 5,
     # For safety
     if segments == []:
         print "Warning! No good segments detected!"
-        return display, [(cols / 2, rows)]   # Center point of image...
+        return display, None   # Center point of image...
     # Build segment "tree" out of segments
     # Get rid of small trees
     # Return the x coord of the most reasonable point to track
     # Which is the root with the minimum height
     display, roots = link_segments(segments, display = display, 
         interval = interval, img_height = rows, skip = skip)
-    largest_tree = set()
+    largest_tree = None
     largest_size = 0
+    sec_largest_size = 0
+    sec_largest_tree = None
     for root in roots:
         if debug:
             print root.segment, root.graph_size, root.segment_length_sum
         if not choose_thin:
-            if root.graph_size > largest_size:
+            if root.graph_size >= largest_size:
+                sec_largest_size = largest_size
+                sec_largest_tree = largest_tree
                 largest_size = root.graph_size
-                largest_tree = set([root])
-            elif root.graph_size == largest_size:
-                largest_tree.add(root)
+                largest_tree = root
+            elif root.graph_size >= sec_largest_size:
+                sec_largest_size = root.graph_size
+                sec_largest_tree = root
         else:
             # We also take in account the "wideness" of the segments
             weighted_size = (root.graph_size ** 2 / 
                 (float)(root.segment_length_sum))
-            print weighted_size
-            if weighted_size > largest_size:
+            if weighted_size >= largest_size:
+                sec_largest_size = largest_size
+                sec_largest_tree = largest_tree
                 largest_size = weighted_size
-                largest_tree = set([root])
-            elif weighted_size == largest_size:
-                largest_tree.add(root)
-    print largest_size
-    min_height = None
-    point = None
-    for root in largest_tree:
-        if min_height == None or root.height < min_height:
-            min_height = root.height
-            point = (root.center, rows - root.height * interval)
-    cv2.circle(display, (point[0], point[1]), 10,(255,255,255),2)
-    return display, [point]
+                largest_tree = root
+            elif weighted_size >= sec_largest_size:
+                sec_largest_size = weighted_size
+                sec_largest_tree = root
+    return display, [largest_tree, sec_largest_tree]
+
+def get_tracking_data(grayimg, display, state, sample_rows = 5,
+        interval = 15, pt_count = 10,
+        max_length = 0.5, max_segments = 4, skip = False, 
+        choose_thin = False, debug = False, 
+        split_detection = False, 
+        root_height_threshold = 2, root_size_threshold = 4):
+    rows, cols = grayimg.shape
+    display, roots = get_good_pts(grayimg, display, sample_rows = sample_rows,
+        interval = interval, pt_count = pt_count,
+        max_length = max_length, max_segments = max_segments, skip = skip, 
+        choose_thin = choose_thin, debug = debug)
+    if roots == None:
+        return display, [(cols / 2, rows)]
+    else:
+        point = [0,0]
+        if split_detection:
+            output = state.update(roots[0])
+            print output
+            choice = state.choice
+            if state.state == "ON_DIVERGE":
+                if choice.upper() == "L":
+                    point[0] = roots[0].segment[0]
+                    point[1] = rows - interval * roots[0].height
+                else:
+                    assert choice.upper() == "R"
+                    point[0] = roots[0].segment[1]
+                    point[1] = rows - interval * roots[0].height
+            elif state.state == "PASS_DIVERGE":
+                if choice.upper() == "L":
+                    selected_root = roots[0]
+                    if (roots[1] != None and 
+                        roots[1].segment[0] < selected_root.segment[0] and
+                        roots[1].height <= root_height_threshold and
+                        roots[1].size >= root_size_threshold):
+                        selected_root = roots[1]
+                    point[0] = selected_root.segment[0]
+                    point[1] = rows - interval * selected_root.height
+                else:
+                    assert choice.upper() == "R"
+                    selected_root = roots[0]
+                    if (roots[1] != None and 
+                        roots[1].segment[1] > selected_root.segment[1] and
+                        roots[1].height <= root_height_threshold and
+                        roots[1].size >= root_size_threshold):
+                        selected_root = roots[1]
+                    point[0] = selected_root.segment[1]
+                    point[1] = rows - interval * selected_root.height
+            else:
+                # Just the normal stuff
+                point[0] = roots[0].center
+                point[1] = rows - interval * roots[0].height
+        else:
+            point[0] = roots[0].center
+            point[1] = rows - interval * roots[0].height
+        cv2.circle(display, (point[0], point[1]), 10,(255,255,255),2)
+        return display, [point]
+
 
 ################################
 # test functions
@@ -465,8 +663,12 @@ def test_segment_tree():
         print root.segment, root.graph_size
 
     converge = get_converge(roots)
+    print "Converge = ", converge
     if converge != None: converge = converge.height * interval
     split = get_split(roots)
+    print "Split = ", split
+    for node in split.roots: 
+        print node
     if split != None: split = split.height * interval
     print "Converge: ", converge
     print "Split: ", split
@@ -519,7 +721,7 @@ def test_get_good_pts():
     img = cv2.resize(img,(width, height), interpolation = cv2.INTER_CUBIC)
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     img = cv2.GaussianBlur(img,(11,11),0)
-    img, pts = get_good_pts(img, img, pt_count = 20, skip = True, 
+    img, pts = get_tracking_data(img, img, None, pt_count = 20, skip = True, 
         debug = True, choose_thin = True)
     print pts[0]
     plt.imshow(img, cmap = 'gray', interpolation = 'bicubic')
