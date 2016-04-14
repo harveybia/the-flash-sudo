@@ -118,6 +118,8 @@ LOCAL_ADDR = socket.getfqdn()
 MOBOT_PORT = 15112
 
 # Global Constants:
+CV_BLUR_FACTOR = 4
+
 FILTER_ORIG   = 0 # Original Video
 FILTER_PROC   = 1 # Processed Image (Canny Edges)
 FILTER_BW     = 2 # Black & White View
@@ -395,7 +397,7 @@ def captureAndSaveImage():
     CAMERA.capture(stream, format='jpeg')
     data = np.fromstring(stream.getvalue(), dtype=np.uint8)
     raw_img = cv2.imdecode(data, 0) # Returns a grayscale image
-    blurred = findBlurred(raw_img, BLUR_FACTOR)
+    blurred = findBlurred(raw_img, CV_BLUR_FACTOR)
     display, pointlst = processing.get_good_pts(blurred, raw_img,
         interval=ALPHACV_INTERVAL, pt_count=ALPHACV_PT_COUNT,
         skip=ALPHA_CV_ROW_SKIP, choose_thin=ALPHA_CV_CHOOSE_THIN)
@@ -644,7 +646,7 @@ class MobotFramework(object):
         self.filterstate = 0
 
         self.values = {
-            'BRIG': 0, 'CNST': 50, 'BLUR': 4,
+            'BRIG': 0, 'CNST': 50, 'BLUR': CV_BLUR_FACTOR,
             'THRS': 150, 'SIZE': 3, 'CERT': 0.7, 'PTS': 4, 'RADI': 30,
                 'A': 0.6, 'B': 0.3, 'C': 0.1,
             'TCHS': 0.5, 'GATG': 14, 'MAXS': 100
