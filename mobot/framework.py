@@ -151,90 +151,6 @@ STAT_DISCONNECTED = 23
 STAT_MISSION = 24
 STAT_ABORT = 25
 
-def captureAndSaveImage():
-    # Boot option: -c, captures image with recognition
-    stream = io.BytesIO()
-    CAMERA.resolution = (V_WIDTH, V_HEIGHT)
-    CAMERA.framerate = FRAMERATE
-    CAMERA.start_preview()
-    time.sleep(0.5)
-    CAMERA.capture(stream, format='jpeg')
-    data = np.fromstring(stream.getvalue(), dtype=np.uint8)
-    raw_img = cv2.imdecode(data, 0) # Returns a grayscale image
-    blurred = findBlurred(raw_img, BLUR_FACTOR)
-    display, pointlst = processing.get_good_pts(blurred, raw_img,
-        interval=ALPHACV_INTERVAL, pt_count=ALPHACV_PT_COUNT,
-        skip=ALPHA_CV_ROW_SKIP, choose_thin=ALPHA_CV_CHOOSE_THIN)
-    # assert(len(pointlst) == 0): this is postcondition of alphacv
-    filename = 'captured/' + time.ctime().replace(' ', '_') + '.jpg'
-    cv2.imwrite(filename, display)
-
-# Parse the input parameters:
-try:
-    # --help, --standalone, --mode: 'alpha' or 'beta'
-    # h: help; s: standalone; m: either 'alpha' or 'beta'
-    opts, args = getopt.getopt(sys.argv[1:], 'hsm:iktc', [])
-except getopt.GetoptError:
-    print "usage: run 'framework.py -h' to see documentation"
-    sys.exit(2)
-
-for opt, arg in opts:
-    if opt == '-h':
-        print 'usage: framework.py (-s (-m <mode> -i -k))'
-        print flash
-        print '-h           Print help (this message) and exit'
-        print '-s           Run standalone mode independent of client'
-        print '-i           Invert the color seen (we are tracking white line)'
-        print '-m <mode>    Select CV Mode being used'
-        print '             -> alpha: new histogram model'
-        print '             -> beta: obsolete probabilistic tracking model'
-        print '------------------ALPHACV EXCLUSIVE OPTIONS------------------'
-        print '-c           Save processed image (under alphacv)'
-        print '-k           Row skip: allow skipping rows for grouping'
-        print '-t           Choose thin: whether we shall favor thinner group'
-        sys.exit(2)
-    elif opt in ('-s', '--standalone'):
-        STANDALONE = True
-
-    elif opt in ('-m', '--mode'):
-        if arg == 'alpha':
-            init('system running on alpha histogram algorithm.')
-            CV_MANUAL_MODE = 'alpha'
-        elif arg == 'beta':
-            init('system running on beta probabilistic algorithm.')
-            CV_MANUAL_MODE = 'beta'
-        else:
-            warn('not a valid mode, falling back to alpha.')
-            CV_MANUAL_MODE = 'alpha'
-
-    elif opt in ('-i', '--inverted'):
-        info('inverted cam mode enabled.')
-        CV_MANUAL_IRNV = True
-
-    elif opt in ('-k',):
-        info('row skipping enabled.')
-        ALPHA_CV_ROW_SKIP = True
-
-    elif opt in ('-t',):
-        info('choose_thin enabled.')
-        ALPHA_CV_CHOOSE_THIN = True
-
-    elif opt in ('-c',):
-        info('capturing image with alphacv, please wait until program exits.')
-        captureAndSaveImage()
-        info('succeeded, exiting.')
-        sys.exit(0)
-
-    else:
-        warn('unhandled option, cowardly exiting.')
-        sys.exit(2)
-
-# Clean namespace
-try:
-    del opts, args
-except:
-    pass
-
 # ---------- COMPUTER VISION CORE ALGORITHM ----------
 
 def profile(fn):
@@ -465,6 +381,94 @@ def sampleContourArray(img, interval=12, injective=False):
     S = bezier.Bspline(P, t, k)
     #print P
     return S
+
+# ----------------------- END ------------------------
+# ------------------ SYS ARGV PARSER -----------------
+
+def captureAndSaveImage():
+    # Boot option: -c, captures image with recognition
+    stream = io.BytesIO()
+    CAMERA.resolution = (V_WIDTH, V_HEIGHT)
+    CAMERA.framerate = FRAMERATE
+    CAMERA.start_preview()
+    time.sleep(0.5)
+    CAMERA.capture(stream, format='jpeg')
+    data = np.fromstring(stream.getvalue(), dtype=np.uint8)
+    raw_img = cv2.imdecode(data, 0) # Returns a grayscale image
+    blurred = findBlurred(raw_img, BLUR_FACTOR)
+    display, pointlst = processing.get_good_pts(blurred, raw_img,
+        interval=ALPHACV_INTERVAL, pt_count=ALPHACV_PT_COUNT,
+        skip=ALPHA_CV_ROW_SKIP, choose_thin=ALPHA_CV_CHOOSE_THIN)
+    # assert(len(pointlst) == 0): this is postcondition of alphacv
+    filename = 'captured/' + time.ctime().replace(' ', '_') + '.jpg'
+    cv2.imwrite(filename, display)
+
+
+# Parse the input parameters:
+try:
+    # --help, --standalone, --mode: 'alpha' or 'beta'
+    # h: help; s: standalone; m: either 'alpha' or 'beta'
+    opts, args = getopt.getopt(sys.argv[1:], 'hsm:iktc', [])
+except getopt.GetoptError:
+    print "usage: run 'framework.py -h' to see documentation"
+    sys.exit(2)
+
+for opt, arg in opts:
+    if opt == '-h':
+        print 'usage: framework.py (-s (-m <mode> -i -k))'
+        print flash
+        print '-h           Print help (this message) and exit'
+        print '-s           Run standalone mode independent of client'
+        print '-i           Invert the color seen (we are tracking white line)'
+        print '-m <mode>    Select CV Mode being used'
+        print '             -> alpha: new histogram model'
+        print '             -> beta: obsolete probabilistic tracking model'
+        print '------------------ALPHACV EXCLUSIVE OPTIONS------------------'
+        print '-c           Save processed image (under alphacv)'
+        print '-k           Row skip: allow skipping rows for grouping'
+        print '-t           Choose thin: whether we shall favor thinner group'
+        sys.exit(2)
+    elif opt in ('-s', '--standalone'):
+        STANDALONE = True
+
+    elif opt in ('-m', '--mode'):
+        if arg == 'alpha':
+            init('system running on alpha histogram algorithm.')
+            CV_MANUAL_MODE = 'alpha'
+        elif arg == 'beta':
+            init('system running on beta probabilistic algorithm.')
+            CV_MANUAL_MODE = 'beta'
+        else:
+            warn('not a valid mode, falling back to alpha.')
+            CV_MANUAL_MODE = 'alpha'
+
+    elif opt in ('-i', '--inverted'):
+        info('inverted cam mode enabled.')
+        CV_MANUAL_IRNV = True
+
+    elif opt in ('-k',):
+        info('row skipping enabled.')
+        ALPHA_CV_ROW_SKIP = True
+
+    elif opt in ('-t',):
+        info('choose_thin enabled.')
+        ALPHA_CV_CHOOSE_THIN = True
+
+    elif opt in ('-c',):
+        info('capturing image with alphacv, please wait until program exits.')
+        captureAndSaveImage()
+        info('succeeded, exiting.')
+        sys.exit(0)
+
+    else:
+        warn('unhandled option, cowardly exiting.')
+        sys.exit(2)
+
+# Clean namespace
+try:
+    del opts, args
+except:
+    pass
 
 # ----------------------- END ------------------------
 
