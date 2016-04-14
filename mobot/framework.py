@@ -402,7 +402,8 @@ def captureAndSaveImage():
         interval=ALPHACV_INTERVAL, pt_count=ALPHACV_PT_COUNT,
         skip=ALPHA_CV_ROW_SKIP, choose_thin=ALPHA_CV_CHOOSE_THIN)
     # assert(len(pointlst) == 0): this is postcondition of alphacv
-    filename = 'captured/' + time.ctime().replace(' ', '_') + '.jpg'
+    filename = 'captured/' + time.ctime().replace(' ', '_').replace(':', '_') \
+        + '.jpg'
     cv2.imwrite(filename, display)
 
 
