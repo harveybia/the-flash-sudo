@@ -14,21 +14,27 @@ class SegmentNode(object):
         self.prev = set()
         self.next = set()
         self.graph_size = 1
+        self.segment_length_sum = abs(segment[1] - segment[0])
+        self.max_height = height
 
     def addNext(self, other):
         self.next.add(other)
         other.prev.add(self)
 
-        size = self.graph_size + other.graph_size
-        self.set_graph_size(size)
+        height = other.height
+        length_sum = self.segment_length_sum + other.segment_length_sum
+        other.set_graph_size(height, length_sum)
 
-    def set_graph_size(self, size):
-        if self.graph_size == size: return
-        self.graph_size = size
-        for node in self.next:
-            node.set_graph_size(size)
+    def set_graph_size(self, height, length_sum):
+        if height > self.max_height:
+            self.graph_size += height - self.max_height
+            self.max_height = height
+        self.segment_length_sum = length_sum
+        # for node in self.next:
+        #     node.set_graph_size(size)
+        # This only propagates backwards
         for node in self.prev:
-            node.set_graph_size(size)
+            node.set_graph_size(height, length_sum)
 
     def get_hashables(self):
         return (self.segment[0], self.segment[1], self.height)
@@ -37,7 +43,8 @@ class SegmentNode(object):
         return hash(self.get_hashables())
 
     def __eq__(self, other):
-        return self.segment == other.segment and self.height == other.height
+        return (isinstance(other, SegmentNode) and 
+            self.segment == other.segment and self.height == other.height)
 
     def is_root(self):
         return len(self.prev) == 0
@@ -175,7 +182,8 @@ def gen_segment_nodes(all_segments):
         result.append(row_nodes)
     return result
 
-def link_segments(all_segments):
+def link_segments(all_segments, display = None, 
+    interval = 0, img_height = 0, skip = False):
     # Generates a node for each segment and links them together.
     # Returns a list of "root" nodes (those that don't have a previous node)
     # @params
@@ -186,13 +194,25 @@ def link_segments(all_segments):
         row_nodes = all_nodes[height]
         for segment_node in row_nodes:
             # Link the node to some overlapping node in previous row
+            flag = False
             for prev_node in all_nodes[height - 1]:
                 if overlap(prev_node.segment, segment_node.segment):
                     prev_node.addNext(segment_node)
+                    flag = True
+            # If the previous row has no connections
+            # Go to the second previous row
+            if skip and (not flag) and height > 1:
+                for prev_node in all_nodes[height - 2]:
+                    if overlap(prev_node.segment, segment_node.segment):
+                        prev_node.addNext(segment_node)
+                        if display != None:
+                            row = img_height - (height - 1) * interval
+                            cv2.line(display, (prev_node.segment[0], row),
+                                (prev_node.segment[1], row), (255, 255, 255), 3)
             if segment_node.is_root(): roots.append(segment_node)
     # Segments in the first line are always roots
     roots += all_nodes[0]
-    return roots
+    return display, roots
 
 def get_converge(roots):
     # Get the first segment where two lines converge
@@ -297,7 +317,8 @@ def new_get_gray(img, row, sample_rows = 10, thereshold = 20):
 
 def get_good_pts(grayimg, display, sample_rows = 5,
         interval = 15, pt_count = 10,
-        max_length = 0.5, max_segments = 4):
+        max_length = 0.5, max_segments = 4, skip = False, 
+        choose_thin = False, debug = False):
     # Get the white segments from picture and filter bad points
     # Currently returns a list of only the most reasonable tracking point
     # @params
@@ -337,21 +358,37 @@ def get_good_pts(grayimg, display, sample_rows = 5,
     # Get rid of small trees
     # Return the x coord of the most reasonable point to track
     # Which is the root with the minimum height
-    roots = link_segments(segments)
+    display, roots = link_segments(segments, display = display, 
+        interval = interval, img_height = rows, skip = skip)
     largest_tree = set()
     largest_size = 0
     for root in roots:
-        if root.graph_size > largest_size:
-            largest_size = root.graph_size
-            largest_tree = set([root])
-        elif root.graph_size == largest_size:
-            largest_tree.add(root)
+        if debug:
+            print root.segment, root.graph_size, root.segment_length_sum
+        if not choose_thin:
+            if root.graph_size > largest_size:
+                largest_size = root.graph_size
+                largest_tree = set([root])
+            elif root.graph_size == largest_size:
+                largest_tree.add(root)
+        else:
+            # We also take in account the "wideness" of the segments
+            weighted_size = (root.graph_size ** 2 / 
+                (float)(root.segment_length_sum))
+            print weighted_size
+            if weighted_size > largest_size:
+                largest_size = weighted_size
+                largest_tree = set([root])
+            elif weighted_size == largest_size:
+                largest_tree.add(root)
+    print largest_size
     min_height = None
     point = None
     for root in largest_tree:
         if min_height == None or root.height < min_height:
             min_height = root.height
-            point = (root.center, rows - root.height)
+            point = (root.center, rows - root.height * interval)
+    cv2.circle(display, (point[0], point[1]), 10,(255,255,255),2)
     return display, [point]
 
 ################################
@@ -418,12 +455,12 @@ def test_segment_tree():
     rows = 20
     for i in xrange(rows):
         row = height - i * interval
-        result = get_white_segments_from_row(img, row)
+        result = get_white_segments_from_row(img, row, sample_rows = 5)
         for segment in result:
             cv2.line(img,(segment[0],row), (segment[1], row),(0,0,255),5)
         segments.append(result)
 
-    roots = link_segments(segments)
+    temp, roots = link_segments(segments)
     for root in roots:
         print root.segment, root.graph_size
 
@@ -477,16 +514,19 @@ def test_node():
     print "Passed!"
 
 def test_get_good_pts():
-    img = cv2.imread('../tests/11.jpg')
+    img = cv2.imread('../tests/12.jpg')
     height, width = 300, 300
     img = cv2.resize(img,(width, height), interpolation = cv2.INTER_CUBIC)
     img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     img = cv2.GaussianBlur(img,(11,11),0)
-    img, pts = get_good_pts(img, img, pt_count = 20)
+    img, pts = get_good_pts(img, img, pt_count = 20, skip = True, 
+        debug = True, choose_thin = True)
     print pts[0]
     plt.imshow(img, cmap = 'gray', interpolation = 'bicubic')
     plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
     plt.show()
 
+def test():pass
+
 if __name__ == '__main__':
-    test_get_good_pts()
+    test()
