@@ -151,6 +151,24 @@ STAT_DISCONNECTED = 23
 STAT_MISSION = 24
 STAT_ABORT = 25
 
+def captureAndSaveImage():
+    # Boot option: -c, captures image with recognition
+    stream = io.BytesIO()
+    CAMERA.resolution = (V_WIDTH, V_HEIGHT)
+    CAMERA.framerate = FRAMERATE
+    CAMERA.start_preview()
+    time.sleep(0.5)
+    CAMERA.capture(stream, format='jpeg')
+    data = np.fromstring(stream.getvalue(), dtype=np.uint8)
+    raw_img = cv2.imdecode(data, 0) # Returns a grayscale image
+    blurred = findBlurred(raw_img, BLUR_FACTOR)
+    display, pointlst = processing.get_good_pts(blurred, raw_img,
+        interval=ALPHACV_INTERVAL, pt_count=ALPHACV_PT_COUNT,
+        skip=ALPHA_CV_ROW_SKIP, choose_thin=ALPHA_CV_CHOOSE_THIN)
+    # assert(len(pointlst) == 0): this is postcondition of alphacv
+    filename = 'captured/' + time.ctime().replace(' ', '_') + '.jpg'
+    cv2.imwrite(filename, display)
+
 # Parse the input parameters:
 try:
     # --help, --standalone, --mode: 'alpha' or 'beta'
@@ -216,23 +234,6 @@ try:
     del opts, args
 except:
     pass
-
-def captureAndSaveImage():
-    stream = io.BytesIO()
-    CAMERA.resolution = (V_WIDTH, V_HEIGHT)
-    CAMERA.framerate = FRAMERATE
-    CAMERA.start_preview()
-    time.sleep(0.5)
-    CAMERA.capture(stream, format='jpeg')
-    data = np.fromstring(stream.getvalue(), dtype=np.uint8)
-    raw_img = cv2.imdecode(data, 0) # Returns a grayscale image
-    blurred = findBlurred(raw_img, BLUR_FACTOR)
-    display, pointlst = processing.get_good_pts(blurred, raw_img,
-        interval=ALPHACV_INTERVAL, pt_count=ALPHACV_PT_COUNT,
-        skip=ALPHA_CV_ROW_SKIP, choose_thin=ALPHA_CV_CHOOSE_THIN)
-    # assert(len(pointlst) == 0): this is postcondition of alphacv
-    filename = 'captured/' + time.ctime().replace(' ', '_') + '.jpg'
-    cv2.imwrite(filename, display)
 
 # ---------- COMPUTER VISION CORE ALGORITHM ----------
 
