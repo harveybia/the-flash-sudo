@@ -821,7 +821,7 @@ class MobotFramework(object):
             self._setMotorSpeed(speeds[0], speeds[1])
             self._updateStatus()
 
-            incline_btn = GPIO.input(RAMP_BTN)
+            incline_btn = not GPIO.input(RAMP_BTN)
             if ((not self.incline_btn_prev) and incline_btn):
                 # Button is pressed, set inclined
                 self.setInclined()
