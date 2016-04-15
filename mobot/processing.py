@@ -110,7 +110,7 @@ class BifurcationState(object):
             # We only care about converge in this state
             converge = get_converge(roots)
             if converge != None:
-                if (self.converge == None or 
+                if (self.converge == None or
                     converge.height < BifurcationState.THERESHOLD_HEIGHT):
                     self.converge_count += 1
                     self.converge = converge
@@ -161,7 +161,7 @@ class BifurcationState(object):
 
 
         elif self.state == "PASS_DIVERGE":
-            if(self.time > BifurcationState.THERESHOLD_TIME or 
+            if(self.time > BifurcationState.THERESHOLD_TIME or
                 not has_two_roots):
                 self.state = "SINGLE_LINE"
                 self.time = 0
@@ -401,7 +401,7 @@ def find_split_from_node(curr):
     # roots: (list<SegmentNode>) A list of root nodes
     if len(curr.next) == 2:
         next_segments = list(curr.next)
-        if (not has_repetition(next_segments[0].next, 
+        if (not has_repetition(next_segments[0].next,
                                next_segments[1].next) and
             next_segments[0].height == next_segments[1].height):
             return curr
@@ -517,7 +517,7 @@ def get_good_pts(grayimg, display, sample_rows = 5,
                     sec_largest_tree = largest_tree
                 largest_size = root.graph_size
                 largest_tree = root
-            elif (root.graph_size >= sec_largest_size and 
+            elif (root.graph_size >= sec_largest_size and
                 largest_tree not in root.roots):
                 sec_largest_size = root.graph_size
                 sec_largest_tree = root
@@ -532,7 +532,7 @@ def get_good_pts(grayimg, display, sample_rows = 5,
                     sec_largest_tree = largest_tree
                 largest_size = weighted_size
                 largest_tree = root
-            elif (weighted_size >= sec_largest_size and 
+            elif (weighted_size >= sec_largest_size and
                 largest_tree not in root.roots):
                 sec_largest_size = weighted_size
                 sec_largest_tree = root
@@ -568,14 +568,14 @@ def get_tracking_data(grayimg, display, state, sample_rows = 5,
             choice = state.choice
             # Bottom left corner of text
             anchor = (10, 20)
-            cv2.putText(display, "%s %s" % (choice, state.state), 
-                anchor, cv2.FONT_HERSHEY_PLAIN, 1, 0)
+            cv2.putText(display, "%s %s" % (choice, state.state),
+                anchor, cv2.FONT_HERSHEY_PLAIN, 1, 255)
             if state.state == "APPROACH_CONVERGE":
                 # We need to follow the safest option
                 center = None
                 for root in roots[0].roots:
                     for xcoord in root.segment:
-                        if (abs(cols / 2 - point[0]) > 
+                        if (abs(cols / 2 - point[0]) >
                             abs(cols / 2 - xcoord)):
                             point[0] = xcoord
                             point[1] = rows - interval * root.height
