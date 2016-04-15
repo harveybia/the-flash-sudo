@@ -115,8 +115,10 @@ RAMP_I = 0.0005
 RAMP_D = 0.5
 RAMP_BASESPEED = 150
 RAMP_BTN = 21 # GPIO Port
+ABORT_BTN = 20 # GPIO Abort Signal
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(RAMP_BTN, GPIO.IN)
+GPIO.setup(ABORT_BTN, GPIO.IN)
 
 # Alphacv algorithm configuration
 # WARNING: Algorithm is non-linear, increasing number would result in
@@ -821,6 +823,14 @@ class MobotFramework(object):
             self._setMotorSpeed(speeds[0], speeds[1])
             self._updateStatus()
 
+            # Emergency Abort
+            if (not GPIO.input(ABORT_BTN)):
+                warn('manually aborting mission!!!')
+                self.stopMission()
+                CAMERA.close()
+                sys.exit(0)
+
+            # Ramp Adapatation
             incline_btn = not GPIO.input(RAMP_BTN)
             if ((not self.incline_btn_prev) and incline_btn):
                 # Button is pressed, set inclined
