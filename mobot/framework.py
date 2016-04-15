@@ -873,7 +873,6 @@ class MobotFramework(object):
         self.done = True
         self.loopstop.set()
         self.hardwarestop.set()
-        self.exposed_stopVideoStream()
         # Shut down the processors orderly
         while self.pool:
             with self.lock:
