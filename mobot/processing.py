@@ -62,9 +62,9 @@ class BifurcationState(object):
         "APPROACH_DIVERGE", "ON_DIVERGE", "PASS_DIVERGE"]
 
     EDGE = 0.1
-    THERESHOLD_TIME = 1
-    THERESHOLD_HEIGHT = 5
-    THERESHOLD_COUNT = 2
+    THERESHOLD_TIME = 5
+    THERESHOLD_HEIGHT = 7
+    THERESHOLD_COUNT = 3
 
     def __init__(self, width, height, choices):
         self.state = "SINGLE_LINE"
@@ -81,7 +81,7 @@ class BifurcationState(object):
         self.choices = choices
         self.choice = choices[0]
 
-    def update(self, root_node):
+    def update(self, root_node, has_two_roots):
         self.time += 1
         if self.state != "SINGLE_LINE":
             self.converge = None
@@ -91,86 +91,83 @@ class BifurcationState(object):
         edge_segments = 0
         edge = BifurcationState.EDGE * self.img_width
         for root in roots:
-            if (root.height <= 1 or
-                root.segment[0] < edge or
-                root.segment[1] > self.img_width - edge):
+            if root.height <= 1:
                 edge_segments += 1
+
         self.edge_segments = edge_segments
 
         # Find first diverge
         diverge = get_split(roots)
         diverge_height = None
+        print "diverge:", diverge
         if diverge != None:
             diverge_height = diverge.height
+            # for node in diverge.next:
+            #     print node
 
         if self.state == "SINGLE_LINE":
             # Find first converge
             # We only care about converge in this state
             converge = get_converge(roots)
             if converge != None:
-                if (self.converge == None or
-                    self.converge.height >= converge.height):
+                if (self.converge == None or 
+                    converge.height < BifurcationState.THERESHOLD_HEIGHT):
                     self.converge_count += 1
                     self.converge = converge
-                if (self.time > BifurcationState.THERESHOLD_TIME and
-                    self.converge_count >= BifurcationState.THERESHOLD_COUNT and
-                    converge.height <= BifurcationState.THERESHOLD_HEIGHT):
+                if (self.converge_count >= BifurcationState.THERESHOLD_COUNT or
+                    edge_segments > 1):
                     self.state = "APPROACH_CONVERGE"
                     self.time = 0
                     self.diverge_count = 0
             if diverge != None:
                 if (self.diverge == None or
-                    self.diverge.height >= diverge.height):
+                    diverge.height <= BifurcationState.THERESHOLD_HEIGHT):
                     self.diverge_count += 1
                     self.diverge = diverge
-                if (self.time > BifurcationState.THERESHOLD_TIME and
-                    self.diverge_count >= BifurcationState.THERESHOLD_COUNT and
-                    diverge.height <= BifurcationState.THERESHOLD_HEIGHT and
+                if (self.diverge_count >= BifurcationState.THERESHOLD_COUNT and
                     edge_segments == 1):
                     self.state = "ON_DIVERGE"
                     self.diverge_count = 0
                     self.time = 0
+            else:
+                self.diverge_count = max(0, self.diverge_count - 1)
 
         elif self.state == "APPROACH_CONVERGE":
             # This state is a safety that prevents us from missing the diverge
             if diverge != None:
                 if (self.diverge == None or
-                    self.diverge.height >= diverge.height):
+                    diverge.height <= BifurcationState.THERESHOLD_HEIGHT):
                     self.diverge_count += 1
                     self.diverge = diverge
-                if (self.time > BifurcationState.THERESHOLD_TIME or
-                    diverge.height <= BifurcationState.THERESHOLD_HEIGHT or
+                if (self.diverge_count >= BifurcationState.THERESHOLD_COUNT and
                     edge_segments == 1):
                     self.state = "ON_DIVERGE"
+                    self.diverge_count = 0
+                    self.time = 0
+                if (self.time > 2 * BifurcationState.THERESHOLD_TIME):
+                    # That was probably a false judgement
+                    self.state = "SINGLE_LINE"
                     self.diverge_count = 0
                     self.time = 0
 
         elif self.state == "ON_DIVERGE":
             # We need to be ready to make the choice here
-            if diverge != None:
-                if (self.diverge == None or
-                    self.diverge.height >= diverge.height):
-                    self.diverge_count += 1
-                    self.diverge = diverge
-            else:
-                self.diverge_count += 1
-            if (self.time > BifurcationState.THERESHOLD_TIME and
-                (diverge == None or
-                diverge.height > BifurcationState.THERESHOLD_HEIGHT) and
-                self.diverge_count >= BifurcationState.THERESHOLD_COUNT):
+            if (has_two_roots or diverge == None or
+                diverge.height > BifurcationState.THERESHOLD_HEIGHT):
                 self.diverge = None
                 self.diverge_count = 0
                 self.state = "PASS_DIVERGE"
                 self.time = 0
 
+
         elif self.state == "PASS_DIVERGE":
-            if(self.time > BifurcationState.THERESHOLD_TIME):
+            if(self.time > BifurcationState.THERESHOLD_TIME or 
+                not has_two_roots):
                 self.state = "SINGLE_LINE"
                 self.time = 0
                 self.bifurcation_count += 1
                 self.bifurcation_count %= len(self.choices)
                 self.choice = self.choices[self.bifurcation_count]
-
 
         return ("TIME: %d STATE: %s DIVERGE: %s COUNT: %d EDGE_SEGMENTS: %d"
             %(self.time, self.state,
@@ -195,7 +192,7 @@ def get_gray(pic, sample_rows = 5, col_step = 5, rank = 5):
     return get_threshold(sample)
 
 def get_white_segments_from_row(pic, row,
-        sample_rows = 10, buckets = 50, min_length = 0, max_gap = 0):
+        sample_rows = 10, buckets = 50, min_length = 0, max_gap = 2):
     # Get the white segments from the bottom few rows of a black/white picture
     # @params
     # row: (int) Normally should be larger than sample_rows
@@ -404,7 +401,9 @@ def find_split_from_node(curr):
     # roots: (list<SegmentNode>) A list of root nodes
     if len(curr.next) == 2:
         next_segments = list(curr.next)
-        if not has_repetition(next_segments[0].next, next_segments[1].next):
+        if (not has_repetition(next_segments[0].next, 
+                               next_segments[1].next) and
+            next_segments[0].height == next_segments[1].height):
             return curr
     best = None
     for node in curr.next:
@@ -512,11 +511,14 @@ def get_good_pts(grayimg, display, sample_rows = 5,
             print root.segment, root.graph_size, root.segment_length_sum
         if not choose_thin:
             if root.graph_size >= largest_size:
-                sec_largest_size = largest_size
-                sec_largest_tree = largest_tree
+                # We need to make largest and sec largest different trees
+                if largest_tree not in root.roots:
+                    sec_largest_size = largest_size
+                    sec_largest_tree = largest_tree
                 largest_size = root.graph_size
                 largest_tree = root
-            elif root.graph_size >= sec_largest_size:
+            elif (root.graph_size >= sec_largest_size and 
+                largest_tree not in root.roots):
                 sec_largest_size = root.graph_size
                 sec_largest_tree = root
         else:
@@ -524,11 +526,14 @@ def get_good_pts(grayimg, display, sample_rows = 5,
             weighted_size = (root.graph_size ** 2 /
                 (float)(root.segment_length_sum))
             if weighted_size >= largest_size:
-                sec_largest_size = largest_size
-                sec_largest_tree = largest_tree
+                # We need to make largest and sec largest different trees
+                if largest_tree not in root.roots:
+                    sec_largest_size = largest_size
+                    sec_largest_tree = largest_tree
                 largest_size = weighted_size
                 largest_tree = root
-            elif weighted_size >= sec_largest_size:
+            elif (weighted_size >= sec_largest_size and 
+                largest_tree not in root.roots):
                 sec_largest_size = weighted_size
                 sec_largest_tree = root
     return display, [largest_tree, sec_largest_tree]
@@ -549,10 +554,32 @@ def get_tracking_data(grayimg, display, state, sample_rows = 5,
     else:
         point = [0,0]
         if split_detection:
-            output = state.update(roots[0])
+            has_two_roots = False
+            print "Roots:", roots[0], roots[1]
+            if (roots[1] != None and
+                roots[1].height <= root_height_threshold and
+                roots[1].graph_size >= root_size_threshold and
+                roots[1] not in roots[0].roots):
+                # Two reasonable nodes to follow
+                if debug: print "Two reasonable nodes to follow!"
+                has_two_roots = True
+            output = state.update(roots[0], has_two_roots)
             print output
             choice = state.choice
-            if state.state == "ON_DIVERGE":
+            # Bottom left corner of text
+            anchor = (10, 20)
+            cv2.putText(display, "%s %s" % (choice, state.state), 
+                anchor, cv2.FONT_HERSHEY_PLAIN, 1, 0)
+            if state.state == "APPROACH_CONVERGE":
+                # We need to follow the safest option
+                center = None
+                for root in roots[0].roots:
+                    for xcoord in root.segment:
+                        if (abs(cols / 2 - point[0]) > 
+                            abs(cols / 2 - xcoord)):
+                            point[0] = xcoord
+                            point[1] = rows - interval * root.height
+            elif state.state == "ON_DIVERGE":
                 if choice.upper() == "L":
                     print "choosing Left"
                     point[0] = roots[0].segment[0]
@@ -570,6 +597,7 @@ def get_tracking_data(grayimg, display, state, sample_rows = 5,
                         roots[1].segment[0] < selected_root.segment[0] and
                         roots[1].height <= root_height_threshold and
                         roots[1].graph_size >= root_size_threshold):
+                        print "Jumping onto left branch"
                         selected_root = roots[1]
                     point[0] = selected_root.segment[0]
                     point[1] = rows - interval * selected_root.height
@@ -581,6 +609,7 @@ def get_tracking_data(grayimg, display, state, sample_rows = 5,
                         roots[1].segment[1] > selected_root.segment[1] and
                         roots[1].height <= root_height_threshold and
                         roots[1].graph_size >= root_size_threshold):
+                        print "Jumping onto right branch"
                         selected_root = roots[1]
                     point[0] = selected_root.segment[1]
                     point[1] = rows - interval * selected_root.height
@@ -734,7 +763,41 @@ def test_get_good_pts():
     plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
     plt.show()
 
-def test():pass
+def test_state_machine():
+    img = cv2.imread('../tests/17.jpg')
+    height, width = 300, 300
+    choices = ["L", "R", "L", "R"]
+    img = cv2.resize(img,(width, height), interpolation = cv2.INTER_CUBIC)
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    img = cv2.GaussianBlur(img,(11,11),0)
+    state = BifurcationState(height, width, choices)
+    # state.state = "APPROACH_CONVERGE"
+    img, pts = get_tracking_data(img, img, state, pt_count = 20, skip = True,
+        debug = True, choose_thin = False, split_detection = True)
+    print pts[0]
+    plt.imshow(img, cmap = 'gray', interpolation = 'bicubic')
+    plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
+    plt.show()
 
+def test_video():
+    video = cv2.VideoCapture('../tests/test.h264')
+    assert video != None
+    height, width = 300, 300
+    choices = ["L", "R", "L", "R"]
+    state = BifurcationState(height, width, choices)
+    while True:
+        ret, img = video.read()
+        assert ret
+        assert img != None
+        img = cv2.resize(img, (width, height) , interpolation = cv2.INTER_CUBIC)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        img = cv2.GaussianBlur(img,(11,11),0)
+        img, pts = get_tracking_data(img, img, state, pt_count = 20, skip = True,
+        debug = True, choose_thin = False, split_detection = True)
+        print pts[0]
+        plt.imshow(img, cmap = 'gray', interpolation = 'bicubic')
+        plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
+        plt.show()
+        cv2.waitkey()
 if __name__ == '__main__':
-    test()
+    test_video()
