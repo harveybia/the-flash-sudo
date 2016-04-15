@@ -26,6 +26,7 @@ import threading
 import linecache
 import processing
 import numpy as np
+import RPi.GPIO as GPIO
 from PIL import Image
 from BrickPi import *
 from rpyc.utils.server import ThreadedServer
@@ -56,7 +57,7 @@ R1 = PORT_D
 S2 = PORT_4
 
 # Pre-coded choices for loops (right or left)
-LOOP_CHOICES = ['L', 'R', 'L', 'R', 'L'] # Temp TODO: Fix this
+LOOP_CHOICES = ['L'] # Decision Making: all left loops
 
 # Exceptions
 class ParameterInvalidException(Exception):
@@ -100,9 +101,22 @@ HORI_EXC_L = 0.0
 HORI_EXC_R = 0.0
 
 # PID Control Pre-cast Variables
-CTRL_P = 2.3
+CTRL_P = 1.8
 CTRL_I = 0.0005
 CTRL_D = 0.5
+
+# Motor speed configuration
+MOTOR_BASESPEED = 255
+
+# Ramp move constants
+# TODO: Trials will determine the parameters to be used on ramp
+RAMP_P = 1.5
+RAMP_I = 0.0005
+RAMP_D = 0.5
+RAMP_BASESPEED = 150
+RAMP_BTN = 21 # GPIO Port
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(RAMP_BTN, GPIO.IN)
 
 # Alphacv algorithm configuration
 # WARNING: Algorithm is non-linear, increasing number would result in
@@ -112,9 +126,6 @@ ALPHACV_PT_COUNT = 10
 # Whether CV skips one row to find curve (deals with unpainted area)
 ALPHA_CV_ROW_SKIP = False
 ALPHA_CV_CHOOSE_THIN = False
-
-# Motor speed configuration
-MOTOR_BASESPEED = 220
 
 # Service configuration
 LOCAL_ADDR = socket.getfqdn()
@@ -716,6 +727,9 @@ class MobotFramework(object):
         self.i = CTRL_I
         self.d = CTRL_D
 
+        # Variable that stores inclination button state
+        self.incline_btn_prev = False
+
         # Loop control state machine
         self.loopstate = processing.BifurcationState(V_WIDTH, V_HEIGHT,
             LOOP_CHOICES)
@@ -763,6 +777,20 @@ class MobotFramework(object):
         CAMERA.capture_sequence(MobotFramework.yieldstreams(self),
             use_video_port=True)
 
+    def setInclined(self):
+        info('set inclined!')
+        self.p = RAMP_P
+        self.i = RAMP_I
+        self.d = RAMP_D
+        self.basespeed = RAMP_BASESPEED
+
+    def unsetInclined(self):
+        info('unset inclined!')
+        self.p = CTRL_P
+        self.i = CTRL_I
+        self.d = CTRL_D
+        self.basespeed = MOTOR_BASESPEED
+
     def update(self, stop_event):
         # Mobot hardware update loop
         # self.alphacv() # Removed: Image Processing doesnt happen here anymore
@@ -792,6 +820,17 @@ class MobotFramework(object):
             speeds = self.calculateMobotMovement()
             self._setMotorSpeed(speeds[0], speeds[1])
             self._updateStatus()
+
+            incline_btn = GPIO.input(RAMP_BTN)
+            if ((not self.incline_btn_prev) and incline_btn):
+                # Button is pressed, set inclined
+                self.setInclined()
+
+            elif ((self.incline_btn_prev) and not incline_btn):
+                # Button is released, unset inclined
+                self.unsetInclined()
+
+            self.incline_btn_prev = incline_btn
 
             # Update Terminal Feedback
             # Should be disabled for safety considerations -> STABLE_MODE
