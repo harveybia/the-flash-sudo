@@ -2,6 +2,7 @@
 Carnegie Mellon University Mobot Racing 2016
 
 Core Algorithm Version
+Copyright 2016 Harvey Shi, Elias Lu, Matthew Zhao, all rights reserved.
 
 ## Team Members
 Harvey Shi,
