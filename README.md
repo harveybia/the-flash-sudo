@@ -1,13 +1,12 @@
 # the-flash-sudo
-Carnegie Mellon University Mobot Racing 2016
+CMU Spring Carnival Mobot Racing 2016
 
-Core Algorithm Version
-Copyright 2016 Harvey Shi, Elias Lu, Matthew Zhao, all rights reserved.
+We won first place with $1000 prize money! Check us out at: https://youtu.be/ja-ICS9NzA0?t=255
 
 ## Team Members
-Harvey Shi,
-Elias Lu,
-Matthew Zhao
+Haowen (Harvey) Shi,
+Zixu (Elias) Lu,
+Yixiu (Matthew) Zhao
 
 ## Installation Instructions
 Make sure you have the correct paths in your environment.
